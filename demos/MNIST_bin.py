@@ -1,4 +1,9 @@
-from models import *
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
+
+from models.binMNIST import BinMNIST
 import torch
 import torch.utils.data
 import numpy as np

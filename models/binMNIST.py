@@ -1,33 +1,33 @@
 import torch 
-from binary_connect import *
+from layers import binary_layers
 
 class BinMNIST(torch.nn.Module):
     def __init__(self, num_units=2048):
 
         super(BinMNIST, self).__init__()
-        self.linear1 = LinearBin(784, num_units)
+        self.linear1 = binary_layers.LinearBin(784, num_units)
         self.norm1   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop1   = torch.nn.Dropout(p=0.2)
 
 
-        self.linear2 = LinearBin(num_units, num_units)
+        self.linear2 = binary_layers.LinearBin(num_units, num_units)
         self.norm2   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop2   = torch.nn.Dropout(p=0.2)
 
-        self.linear3 = LinearBin(num_units, num_units)
+        self.linear3 = binary_layers.LinearBin(num_units, num_units)
         self.norm3   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop3   = torch.nn.Dropout(p=0.2)
 
-        self.linear4 = LinearBin(num_units, 10)
+        self.linear4 = binary_layers.LinearBin(num_units, 10)
         self.norm4   = torch.nn.BatchNorm1d(10, eps=1e-05, momentum=0.15)
 
         self.activation = torch.nn.LeakyReLU()
 
     def reset(self):
-        self.linear1.init_weight()
-        self.linear2.init_weight()    
-        self.linear3.init_weight()
-        self.linear4.init_weight()
+        self.linear1.reset_parameters()
+        self.linear2.reset_parameters()    
+        self.linear3.reset_parameters()
+        self.linear4.reset_parameters()
 
 
     def clamp(self):

@@ -1,5 +1,5 @@
 import torch
-
+from common import front
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
 
 
@@ -20,14 +20,7 @@ def LogQuant(fsr=7, bitwight=3, lin_back=True, with_sign=False):
 
             return torch.pow(torch.ones_like(grad_output)*2, torch.clamp(torch.round(torch.log2(torch.abs(grad_output))), fsr-2**bitwight,fsr )) 
 
-    class fronteur(torch.nn.Module):
-        def __init__(self):
-            super(fronteur, self).__init__()
-
-        def forward(self, x):
-            return LogQuant_X.apply(x)
-
-    return fronteur()
+    return front(LogQuant_X)
 
 
 
