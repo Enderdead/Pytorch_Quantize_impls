@@ -6,20 +6,20 @@ class BinMNIST(torch.nn.Module):
 
         super(BinMNIST, self).__init__()
         self.linear1 = LinearBin(784, num_units)
-        self.norm1   = torch.nn.BatchNorm1d(num_units)
+        self.norm1   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop1   = torch.nn.Dropout(p=0.2)
 
 
         self.linear2 = LinearBin(num_units, num_units)
-        self.norm2   = torch.nn.BatchNorm1d(num_units)
+        self.norm2   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop2   = torch.nn.Dropout(p=0.2)
 
         self.linear3 = LinearBin(num_units, num_units)
-        self.norm3   = torch.nn.BatchNorm1d(num_units)
+        self.norm3   = torch.nn.BatchNorm1d(num_units, eps=1e-05, momentum=0.15)
         self.drop3   = torch.nn.Dropout(p=0.2)
 
         self.linear4 = LinearBin(num_units, 10)
-        self.norm4   = torch.nn.BatchNorm1d(10)
+        self.norm4   = torch.nn.BatchNorm1d(10, eps=1e-05, momentum=0.15)
 
         self.activation = torch.nn.LeakyReLU()
 
@@ -31,10 +31,10 @@ class BinMNIST(torch.nn.Module):
 
 
     def clamp(self):
-        self.linear1.weight.data.clamp_(min=-1, max=1)
-        self.linear2.weight.data.clamp_(min=-1, max=1)
-        self.linear3.weight.data.clamp_(min=-1, max=1)
-        self.linear4.weight.data.clamp_(min=-1, max=1)
+        self.linear1.clamp()
+        self.linear2.clamp()
+        self.linear3.clamp()
+        self.linear4.clamp()
 
 
     def forward(self, x, dropout=True):
@@ -45,20 +45,20 @@ class BinMNIST(torch.nn.Module):
         """
 
         x = self.linear1(x)
-        x = self.activation(self.norm1(x))
+        x = self.activation(self.norm1(x, eps=1e-05, momentum=0.15))
         if dropout:
             x = self.drop1(x)
         
         x = self.linear2(x)
-        x = self.activation(self.norm2(x))
+        x = self.activation(self.norm2(x, eps=1e-05, momentum=0.15))
         if dropout:
             x = self.drop2(x)
 
         x = self.linear3(x)
-        x = self.activation(self.norm3(x))
+        x = self.activation(self.norm3(x, eps=1e-05, momentum=0.15))
         if dropout:
             x = self.drop3(x)
 
         x = self.linear4(x)
-        x = self.norm4(x)
+        x = self.norm4(x, eps=1e-05, momentum=0.15)
         return torch.nn.functional.softmax(x)
