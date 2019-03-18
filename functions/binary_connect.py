@@ -57,28 +57,6 @@ def BinaryConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, grou
 
     return _BinaryConv2d.apply(input, weight, bias)
 
-"""
-@staticmethod
-def backward(cxt, grad_output):
-    input, weight, bias = cxt.saved_variables
-            
-    grad_input = grad_weight= grad_bias = None
-
-    if cxt.needs_input_grad[0]:
-        grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output)
-        
-    if cxt.needs_input_grad[1]:
-        grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output)
-            
-    if bias is not None and cxt.needs_input_grad[2]:
-        grad_bias = grad_output.sum(0).squeeze(0)
-    
-    if bias is not None:
-        return grad_input, grad_weight, grad_bias
-    else:
-        return grad_input, grad_weight
-
-"""
 
 class BinaryConnectDeterministic(torch.autograd.Function):
     @staticmethod
