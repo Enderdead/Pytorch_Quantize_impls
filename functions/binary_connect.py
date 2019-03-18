@@ -31,7 +31,7 @@ def BinaryConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, grou
         def forward(ctx, input, weight, bias=None):
             ctx.save_for_backward(input, weight, bias)
             weight_b = torch.sign(weight)
-            output = torch.nn.functional.conv2d(input, weight, bias=None, stride=stride, padding=padding, dilation=dilation, groups=groups)
+            output = torch.nn.functional.conv2d(input, weight_b, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
             return output
 
         @staticmethod
