@@ -1,10 +1,86 @@
 import torch
+from functions.common import front
+from device import device
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+class BinaryDense(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, weight, bias=None):
+        ctx.save_for_backward(input, weight, bias)
+        weight_b = torch.sign(weight)
+        output = torch.nn.functional.linear(input, weight, bias)
+        return output
 
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, weight, bias = ctx.saved_variables
+        weight_b = torch.sign(weight)
+        grad_input = grad_weight = grad_bias = None
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output.mm(weight_b)
+        if ctx.needs_input_grad[1]:
+            grad_weight = grad_output.t().mm(input)
+        if bias is not None and ctx.needs_input_grad[2]:
+            grad_bias = grad_output.sum(0).squeeze(0)
+        return grad_input, grad_weight, grad_bias
+
+
+
+def BinaryConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, groups=1):
+    class _BinaryConv2d(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, input, weight, bias=None):
+            ctx.save_for_backward(input, weight, bias)
+            weight_b = torch.sign(weight)
+            output = torch.nn.functional.conv2d(input, weight, bias=None, stride=stride, padding=padding, dilation=dilation, groups=groups)
+            return output
+
+        @staticmethod
+        def backward(ctx, grad_output):
+            input, weight, bias = ctx.saved_variables
+
+            weight_b = torch.sign(weight)
+
+            grad_input = grad_weight = grad_bias = None
+
+            if ctx.needs_input_grad[0]:
+                grad_input = torch.nn.grad.conv2d_input(input.size(), weight_b, grad_output, stride=stride, padding=padding, dilation=dilation, groups=groups)
+            if ctx.needs_input_grad[1]:
+                grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride=stride, padding=padding, dilation=dilation, groups=groups)
+
+            if bias is not None and ctx.needs_input_grad[2]:
+                grad_bias = grad_output.sum(0).squeeze(0).sum(1).squeeze(1).sum(-1).squeeze(-1)
+
+            if bias is not None:
+                return grad_input, grad_weight, grad_bias
+            else:
+                return grad_input, grad_weight  
+
+    return _BinaryConv2d.apply(input, weight, bias)
+
+"""
+@staticmethod
+def backward(cxt, grad_output):
+    input, weight, bias = cxt.saved_variables
+            
+    grad_input = grad_weight= grad_bias = None
+
+    if cxt.needs_input_grad[0]:
+        grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output)
+        
+    if cxt.needs_input_grad[1]:
+        grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output)
+            
+    if bias is not None and cxt.needs_input_grad[2]:
+        grad_bias = grad_output.sum(0).squeeze(0)
+    
+    if bias is not None:
+        return grad_input, grad_weight, grad_bias
+    else:
+        return grad_input, grad_weight
+
+"""
 
 class BinaryConnectDeterministic(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx, input):
         ctx.save_for_backward(input)
@@ -15,8 +91,8 @@ class BinaryConnectDeterministic(torch.autograd.Function):
         input, = ctx.saved_tensors
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
+        return grad_output
 
-        return grad_input
 
 
 class BinaryConnectStochastic(torch.autograd.Function):
@@ -37,6 +113,9 @@ class BinaryConnectStochastic(torch.autograd.Function):
         return grad_input
 
 
+def BinaryConnect(stochastic=False):
+    act = BinaryConnectStochastic if stochastic else BinaryConnectDeterministic
+    return front(act)
 
 
 

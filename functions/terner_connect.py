@@ -1,7 +1,7 @@
 import torch
+from fonctions.common import front
 
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+from device import device
 
 
 class TernerConnectDeterministic(torch.autograd.Function):
@@ -33,4 +33,11 @@ class TernerConnectStochastic(torch.autograd.Function):
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
         return grad_input
+
+
+
+def TernerConnect(stochastic=False):
+    act = TernerConnectStochastic if stochastic else TernerConnectDeterministic
+    return front(act)
+
 
