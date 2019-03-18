@@ -1,11 +1,12 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-
+# 82
 import torch
-from models.Alexnet_LinQuant import *
+from models.VGG_LinQuant import VGGLinQuant
 from torchvision import transforms
 import torchvision
+from progress.bar import ChargingBar
 
 
 from device import device
@@ -13,7 +14,7 @@ from device import device
 
 BATCH_SIZE = 128
 
-model = AlexNetLinQuant().to(device)
+model = VGGLinQuant().to(device)
 
 
 
@@ -44,14 +45,14 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE,
 
 
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(),lr=0.001)# lr= 0.0001)#, momentum=0.8)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.001)# lr= 0.0001)#, momentum=0.8)
 
 for epoch in range(400):  # loop over the dataset multiple times
-
+    bar = ChargingBar('Processing', max=1+(trainset.train_data.shape[0]//BATCH_SIZE))
     running_loss = 0.0
     correct_global = 0.0
     for inputs, labels in trainloader:
-
+        bar.next()
         inputs = inputs.to(device)
         labels = labels.to(device)
         # zero the parameter gradients
@@ -68,8 +69,10 @@ for epoch in range(400):  # loop over the dataset multiple times
         # print statistics
         running_loss += loss.item()
 
-        print(correct/BATCH_SIZE)
-    """
+        #print(correct/BATCH_SIZE)
+    bar.finish()
+
+    correct= 0.0
     for inputs, labels in testloader:
 
         inputs = inputs.to(device)
@@ -83,9 +86,9 @@ for epoch in range(400):  # loop over the dataset multiple times
         correct += (predicted == labels).sum().item()
 
         testset.test_data.shape[0]
-    """
+    
     print('[%d] loss: %.5f accuracy: %.9f' %
-            (epoch + 1, running_loss / trainset.train_data.shape[0], correct_global/ trainset.train_data.shape[0]))
+            (epoch + 1, running_loss / trainset.train_data.shape[0], correct/ testset.test_data.shape[0]))
     running_loss = 0.0
 
 
