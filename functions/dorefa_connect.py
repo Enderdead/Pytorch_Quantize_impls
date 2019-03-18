@@ -1,5 +1,5 @@
 import torch
-from fonctions.common import front
+from functions.common import front
 
 def _quantize(x, bits=3):
     two = torch.ones_like(x)*2
@@ -64,9 +64,6 @@ def QuantConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, group
         @staticmethod
         def backward(ctx, grad_output):
             input, weight, weight_q, max_weight, bias = ctx.saved_variables
-            
-            weight_q = torch.sign(weight)*torch.pow(torch.ones_like(weight)*2, torch.clamp(torch.round(torch.log2(torch.abs(weight))), fsr-2**bitwight ,fsr )) 
-
             grad_input = grad_weight = grad_bias = None
 
             if ctx.needs_input_grad[0]:
