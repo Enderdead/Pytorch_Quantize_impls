@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 # 82
 import torch
-from models.VGG_LinQuant import VGGLinQuant
+from models.VGG.VGG_LinQuant import VGGLinQuant
 from torchvision import transforms
 import torchvision
 from progress.bar import ChargingBar

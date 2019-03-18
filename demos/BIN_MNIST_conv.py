@@ -2,12 +2,13 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-
-from models.binMNIST_conv import BinMNIST
+#.9833
+from models.ConvNet.binMNIST_conv import BinMNIST
 import torch
 import torch.utils.data
 import numpy as np
 import torchvision
+from progress.bar import ChargingBar
 
 
 

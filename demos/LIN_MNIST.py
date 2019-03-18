@@ -3,12 +3,11 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 
-from models.linQuantMNIST import LinQuantMNIST
+from models.FullNet.linQuantMNIST import LinQuantMNIST
 import torch
 import torch.utils.data
 import numpy as np
 import torchvision
-
 
 from device import device
 
@@ -18,6 +17,8 @@ LEARNING_RATE = 0.001
 MOMENTUM = 0.6
 EPOCH = 600
 DATASET_SIZE = 60000
+
+
 def adjust_learning_rate(optimizer, epoch):
     global LEARNING_RATE
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""

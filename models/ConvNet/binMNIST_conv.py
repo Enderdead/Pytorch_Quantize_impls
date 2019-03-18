@@ -32,8 +32,8 @@ class BinMNIST(torch.nn.Module):
 
 
     def clamp(self):
-        #self.linear1.clamp()
-        #self.linear2.clamp()
+        self.conv1.clamp()
+        self.conv2.clamp()
         self.linear3.clamp()
         self.linear4.clamp()
 

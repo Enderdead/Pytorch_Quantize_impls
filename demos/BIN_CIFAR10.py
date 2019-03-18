@@ -3,8 +3,8 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 import torch
-from models.Alexnet_Bin import *
-from models.Alexnet_BinTest import *
+from models.Alexnet.Alexnet_Bin import *
+from models.Alexnet.Alexnet_BinTest import *
 from torchvision import transforms
 import torchvision
 
@@ -12,7 +12,7 @@ import torchvision
 from device import device
 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 3
 
 model = AlexNetBin().to(device)
 

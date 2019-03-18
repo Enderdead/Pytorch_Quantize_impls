@@ -36,8 +36,6 @@ class AlexNetBin(nn.Module):
                 nn.MaxPool2d(kernel_size=3, stride=2),
                 torch.nn.BatchNorm2d(256),
                 nn.Hardtanh(inplace=True),
-
-
         )
         self.classifieur = nn.Sequential(
                 BinaryConnect(stochastic=False),
