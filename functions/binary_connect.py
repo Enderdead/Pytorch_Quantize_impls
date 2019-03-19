@@ -7,7 +7,7 @@ class BinaryDense(torch.autograd.Function):
     def forward(ctx, input, weight, bias=None):
         ctx.save_for_backward(input, weight, bias)
         weight_b = torch.sign(weight)
-        output = torch.nn.functional.linear(input, weight, bias)
+        output = torch.nn.functional.linear(input, weight_b, bias)
         return output
 
     @staticmethod
@@ -89,6 +89,52 @@ class BinaryConnectStochastic(torch.autograd.Function):
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
         return grad_input
+
+# AP2 = sign(x) × 2round(log2jxj)
+def AP2(x):
+    two = torch.ones_like(x)*2
+    return torch.sign(x) * torch.pow(two,torch.round(torch.log2(torch.abs(x))))
+
+
+class ShiftBatch1d(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, running_mean, running_var, weight, bias, eps):
+        inputs_mu = input - running_mean
+        sqrtvar = torch.sqrt(running_var + eps)
+        norm_inputs = inputs_mu*AP2(1/sqrtvar)
+        out = norm_inputs*AP2(weight) + bias
+        ctx.save_for_backward(input, weight, sqrtvar, norm_inputs)
+        return out
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, weight, sqrtvar, norm_inputs = ctx.saved_tensors
+
+        grad_input = grad_running_mean = grad_running_var = grad_weight = grad_bias =  grad_eps = None
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output*weight
+            grad_input = grad_input/sqrtvar
+
+        if ctx.needs_input_grad[1]:
+            grad_running_mean = None#torch.zeros_like(weight)
+
+        if ctx.needs_input_grad[2]:
+            grad_running_var = None #torch.zeros_like(weight)
+
+        if ctx.needs_input_grad[3]:
+            grad_weight = grad_output*norm_inputs
+
+        if ctx.needs_input_grad[4]:
+            grad_bias = grad_output.sum(0).squeeze(0)
+
+        if ctx.needs_input_grad[5]:
+            grad_eps = None#torch.zeros_like(eps)
+        
+        return grad_input, grad_running_mean, grad_running_var, grad_weight, grad_bias,  grad_eps
+
+
+
+
 
 
 def BinaryConnect(stochastic=False):

@@ -53,4 +53,23 @@ class BinarizeConv2d(torch.nn.Conv2d):
         return out
 
 
+class ShiftNormBatch1d(torch.nn.Module):
+    __constants__ = ['momentum', 'eps']
+    def __init__(self, in_dim, eps=1e-5, momentum=0.1):
+        super(ShiftNormBatch1d, self).__init__()
+        self.in_features = in_dim
+        self.weight = torch.nn.Parameter(torch.Tensor(self.in_features))
+        self.bias = torch.nn.Parameter(torch.Tensor(self.in_features))
 
+        self.register_buffer('running_mean', torch.zeros(self.in_features))
+        self.register_buffer('running_var', torch.ones(self.in_features))
+
+        self.eps = eps
+        self.momentum = momentum
+
+
+    def forward(self, x):
+        self.running_mean =  (1 - self.momentum) * self.running_mean + self.momentum * torch.mean(x,0).detach()
+        self.running_var  =  (1 - self.momentum) * self.running_var  + self.momentum * torch.mean((x-self.running_mean)*binary_connect.AP2(x-self.running_mean),0).detach()
+
+        return binary_connect.ShiftBatch1d.apply(x, self.running_mean, self.running_var, self.weight, self.bias, self.eps)
