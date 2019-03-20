@@ -53,7 +53,7 @@ def TernerDense( input, weight, bias=None, stochastic=False):
                 weight_t = (sign + torch.sign(weight -0.5*sign ))/2
             
             ctx.save_for_backward(input, weight, weight_t, bias)
-            output = torch.nn.functional.linear(input, weight, bias)
+            output = torch.nn.functional.linear(input, weight_t, bias)
             return output
 
         @staticmethod
