@@ -73,3 +73,34 @@ class ShiftNormBatch1d(torch.nn.Module):
         self.running_var  =  (1 - self.momentum) * self.running_var  + self.momentum * torch.mean((x-self.running_mean)*binary_connect.AP2(x-self.running_mean),0).detach()
 
         return binary_connect.ShiftBatch1d.apply(x, self.running_mean, self.running_var, self.weight, self.bias, self.eps)
+
+
+
+
+class ShiftNormBatch2d(torch.nn.Module):
+    __constants__ = ['momentum', 'eps']
+    def __init__(self, in_channels, eps=1e-5, momentum=0.1):
+        super(ShiftNormBatch2d, self).__init__()
+        self.in_features = in_channels
+        self.weight = torch.nn.Parameter(torch.Tensor(self.in_features))
+        self.bias = torch.nn.Parameter(torch.Tensor(self.in_features))
+
+        self.register_buffer('running_mean', torch.zeros(self.in_features))
+        self.register_buffer('running_var', torch.ones(self.in_features))
+
+        self.eps = eps
+        self.momentum = momentum
+
+    @staticmethod
+    def _tile(tensor, dim):
+        return tensor.repeat(dim[0],dim[1],1).transpose(2,0)
+
+    def forward(self, x):
+        dim = x.size()[-2:]
+
+        self.running_mean =  (1 - self.momentum) * self.running_mean + self.momentum * torch.mean(x,[0,2,3]).detach()
+        curr_mean = ShiftNormBatch2d._tile(self.running_mean, dim)
+
+        self.running_var  =  (1 - self.momentum) * self.running_var  + self.momentum * torch.mean((x-curr_mean)*binary_connect.AP2(x-curr_mean),[0,2,3]).detach()
+
+        return binary_connect.ShiftBatch1d.apply(x, curr_mean, ShiftNormBatch2d._tile(self.running_var, dim), ShiftNormBatch2d._tile(self.weight, dim), ShiftNormBatch2d._tile(self.bias, dim), self.eps)
