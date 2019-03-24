@@ -18,6 +18,7 @@ class LinearTer(torch.nn.Module):
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
+        self.lin_op = terner_connect.TernerDense(True)
 
     def reset_parameters(self):
         self.weight.data.normal_(0, 1 * (sqrt(1. / self.in_features)))
@@ -30,13 +31,15 @@ class LinearTer(torch.nn.Module):
             self.bias.data.clamp_(-1, 1) 
 
     def forward(self, input):
-        return terner_connect.TernerDense(input, self.weight, self.bias, True)
+        return self.lin_op.apply(input, self.weight, self.bias)
 
 
 class TernerConv2d(torch.nn.Conv2d):
 
     def __init__(self, *kargs, **kwargs):
         super(TernerConv2d, self).__init__(*kargs, **kwargs)
+        self.conv_op = terner_connect.TernerConv2d(True, self.stride,
+                                   self.padding, self.dilation, self.groups)
 
     def reset_parameters(self):
         self.weight.data.normal_(0, 0.5)
@@ -51,8 +54,7 @@ class TernerConv2d(torch.nn.Conv2d):
 
 
     def forward(self, input):
-        out = terner_connect.TernerConv2d(input, self.weight, self.bias, True, self.stride,
-                                   self.padding, self.dilation, self.groups)
+        out = self.conv_op.apply(input, self.weight, self.bias)
 
         return out
 

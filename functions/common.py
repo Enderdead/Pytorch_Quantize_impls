@@ -2,6 +2,9 @@ import torch
 
 
 def front(claaz):
+    """
+    Return a Module proxy of your claaz. 
+    """
     class fronteur(torch.nn.Module):
         def __init__(self):
             super(fronteur, self).__init__()

@@ -39,7 +39,8 @@ class BinarizeConv2d(torch.nn.Conv2d):
 
     def __init__(self, *kargs, **kwargs):
         super(BinarizeConv2d, self).__init__(*kargs, **kwargs)
-
+        self.conv_op = binary_connect.BinaryConv2d(self.stride,
+                                   self.padding, self.dilation, self.groups)
     def clamp(self):
         self.weight.data.clamp_(-1, 1)
         #if not self.bias is None:
@@ -47,9 +48,7 @@ class BinarizeConv2d(torch.nn.Conv2d):
 
 
     def forward(self, input):
-        out = binary_connect.BinaryConv2d(input, self.weight, self.bias, self.stride,
-                                   self.padding, self.dilation, self.groups)
-
+        out = self.conv_op.apply(input, self.weight, self.bias)
         return out
 
 
@@ -72,7 +71,7 @@ class ShiftNormBatch1d(torch.nn.Module):
         self.running_mean =  (1 - self.momentum) * self.running_mean + self.momentum * torch.mean(x,0).detach()
         self.running_var  =  (1 - self.momentum) * self.running_var  + self.momentum * torch.mean((x-self.running_mean)*binary_connect.AP2(x-self.running_mean),0).detach()
 
-        return binary_connect.ShiftBatch1d.apply(x, self.running_mean, self.running_var, self.weight, self.bias, self.eps)
+        return binary_connect.ShiftBatch.apply(x, self.running_mean, self.running_var, self.weight, self.bias, self.eps)
 
 
 
@@ -103,4 +102,4 @@ class ShiftNormBatch2d(torch.nn.Module):
 
         self.running_var  =  (1 - self.momentum) * self.running_var  + self.momentum * torch.mean((x-curr_mean)*binary_connect.AP2(x-curr_mean),[0,2,3]).detach()
 
-        return binary_connect.ShiftBatch1d.apply(x, curr_mean, ShiftNormBatch2d._tile(self.running_var, dim), ShiftNormBatch2d._tile(self.weight, dim), ShiftNormBatch2d._tile(self.bias, dim), self.eps)
+        return binary_connect.ShiftBatch.apply(x, curr_mean, ShiftNormBatch2d._tile(self.running_var, dim), ShiftNormBatch2d._tile(self.weight, dim), ShiftNormBatch2d._tile(self.bias, dim), self.eps)
