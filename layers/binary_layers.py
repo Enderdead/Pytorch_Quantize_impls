@@ -4,20 +4,13 @@ from torch.nn.modules.utils import _pair
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from math import sqrt
-
+from layers.common import QLayer
 from functions import binary_connect
 
-class LinearBin(torch.nn.Module):
-    def __init__(self, in_features, out_features, bias=True):
-        super(LinearBin, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
-        if bias:
-            self.bias = torch.nn.Parameter(torch.Tensor(out_features))
-        else:
-            self.register_parameter('bias', None)
-        self.reset_parameters()
+class LinearBin(torch.nn.Linear, QLayer):
+    def __init__(self, in_features, out_features, bias=True, deterministic=True):
+        torch.nn.Linear.__init__(self, in_features, out_features, bias=bias)
+        self.deterministic = deterministic
 
     def reset_parameters(self):
         self.weight.data.normal_(0, 1 * (sqrt(1. / self.in_features)))
@@ -28,29 +21,28 @@ class LinearBin(torch.nn.Module):
         self.weight.data.clamp_(-1, 1)
         if not self.bias is None:
             self.bias.data.clamp_(-1, 1) 
-
+        
     def forward(self, input):
-        if self.bias is not None:
-            return binary_connect.BinaryDense.apply(input, self.weight, self.bias)
-        return binary_connect.BinaryDense.apply(input, self.weight)
+        if self.deterministic:
+            return torch.nn.functional.linear(input, binary_connect.BinaryConnectDeterministic.apply(self.weight), (self.bias))
+        return torch.nn.functional.linear(input, binary_connect.BinaryConnectStochastic.apply(self.weight), (self.bias))
 
 
-class BinarizeConv2d(torch.nn.Conv2d):
+class BinConv2d(torch.nn.Conv2d, QLayer):
 
-    def __init__(self, *kargs, **kwargs):
-        super(BinarizeConv2d, self).__init__(*kargs, **kwargs)
-        self.conv_op = binary_connect.BinaryConv2d(self.stride,
-                                   self.padding, self.dilation, self.groups)
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, dilation=1, groups=1, bias=True, deterministic=True):
+        torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
+                 padding=padding, dilation=dilation, groups=groups, bias=bias)
+        self.deterministic = deterministic
+
     def clamp(self):
         self.weight.data.clamp_(-1, 1)
-        #if not self.bias is None:
-        #    self.bias.data.clamp_(-1, 1)
-
 
     def forward(self, input):
-        out = self.conv_op.apply(input, self.weight, self.bias)
-        return out
-
+        if self.deterministic:
+            return torch.nn.functional.conv2d(input, binary_connect.BinaryConnectDeterministic.apply(self.weight), self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return torch.nn.functional.conv2d(input, binary_connect.BinaryConnectStochastic.apply(self.weight), self.bias, self.stride, self.padding, self.dilation, self.groups)
 
 class ShiftNormBatch1d(torch.nn.Module):
     __constants__ = ['momentum', 'eps']
