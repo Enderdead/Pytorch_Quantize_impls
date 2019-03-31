@@ -1,8 +1,26 @@
 import torch
 from functions.common import front
 from device import device
+"""
+Implementation of Convolutional Neural Networks using Logarithmic Data Representation :
+https://arxiv.org/pdf/1603.01025.pdf
+"""
 
 def LogQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
+    """
+        Generate a Quantization op using Log method from Imp. CNN using Log Data Rep.
+
+        Forward :
+            Quant(x) = 2^(clamp(round(ln_2(|x|)),fsr-2**bitwight, fsr))
+        BackWard (if not lin_back):
+            grad_input = sign(grad_output)* 2^(clamp(round(ln_2(|grad_output|)),fsr-2**bitwight, fsr))
+
+        params:
+            - fsr : Max value of the output.
+            - bitwight :  Numbers of bits on this quant op.
+            - with_sign : Add a sign bit to quant op.
+            - lin_back : Use linear back propagation or a quantized gradient.
+    """
     class _LogQuant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
@@ -11,26 +29,44 @@ def LogQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
             return torch.pow(torch.ones_like(input)*2, torch.clamp(torch.round(torch.log2(torch.abs(input))), fsr-2**bitwight ,fsr )) 
 
         @staticmethod
-        def backward(self, ctx, grad_output):
+        def backward(ctx, grad_output):
             if lin_back:
                 grad_input = grad_output.clone()
                 return grad_input
-            return torch.sign(grad_output) * torch.pow(torch.ones_like(grad_output)*2, torch.clamp(torch.round(torch.log2(torch.abs(grad_output))), self.fsr-2**self.bitwight,self.fsr )) 
+            return torch.sign(grad_output) * torch.pow(torch.ones_like(grad_output)*2, torch.clamp(torch.round(torch.log2(torch.abs(grad_output))), fsr-2**bitwight,fsr )) 
     return _LogQuant
 
 def LinQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
+    """
+        Generate a Quantization op using Lin method from Imp. CNN using Log Data Rep.
+        
+        Forward :
+            Quant(x) = Clamp(Round(x/step)*step,0,2^(FSR)) with step = 2^{FSR-bitwight}
+        BackWard (if not lin_back):
+            grad_input = sign(grad_output)* Clamp(Round(grad_output/step)*step,0,2^(FSR))
+
+        params:
+            - fsr : Max value of the output.
+            - bitwight :  Numbers of bits on this quant op.
+            - with_sign : Add a sign bit to quant op.
+            - lin_back : Use linear back propagation or a quantized gradient.
+    """
     class _LinQuant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
             # Clip(Round(x/step)*step,0,2^(FSR)) with step = 2^{FSR-bitwight}
+            if(bitwight==32):
+                return input
             step = torch.FloatTensor([2]).pow(fsr-bitwight).to(device)
             if with_sign:
-                return torch.sign(input)*torch.clamp(torch.round(input/step)*step, 0,2**fsr)  
+                return torch.sign(input)*torch.clamp(torch.round(torch.abs(input)/step)*step, 0,2**fsr)  
             return torch.clamp(torch.round(input/step)*step, 0,2**fsr)  
 
         @staticmethod
         def backward(ctx, grad_output):
             grad_input = grad_output.clone()
+            if bitwight==32:
+                return grad_input
             step = torch.FloatTensor([2]).pow(fsr-bitwight).to(device)
             if lin_back:
                 return grad_input
@@ -40,13 +76,45 @@ def LinQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
 
 
 
-def Quant(typ="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
-    if typ == "lin":
-        return front(LinQuant(fsr=fsr, bitwight=bitwight, with_sign=with_sign, lin_back=lin_back))
-    else:
-        return front(LogQuant(fsr=fsr, bitwight=bitwight, with_sign=with_sign, lin_back=lin_back))
+def nnQuant(dtype="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
+    """
+        Return a Torch Module fronter with Quantization op inside. Suport Lin and Log quantization.
 
-# TODO version log 
+        params:
+            - dtype: Use \'lin\' or \'log\' method.
+            - fsr : Max value of the output.
+            - bitwight :  Numbers of bits on this quant op.
+            - with_sign : Add a sign bit to quant op.
+            - lin_back : Use linear back propagation or a quantized gradient.
+    """
+    if dtype == "lin":
+        return front(LinQuant(fsr=fsr, bitwight=bitwight, with_sign=with_sign, lin_back=lin_back))
+    elif dtype=="log":
+        return front(LogQuant(fsr=fsr, bitwight=bitwight, with_sign=with_sign, lin_back=lin_back))
+    else:
+        raise RuntimeError("Only \'log\' and \'lin\' dtype are supported !")
+
+
+def Quant(input, dtype="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
+    """
+        Apply a quantization with backprob support on input tensor.
+        
+        params:
+            - dtype: Use \'lin\' or \'log\' method.
+            - fsr : Max value of the output.
+            - bitwight :  Numbers of bits on this quant op.
+            - with_sign : Add a sign bit to quant op.
+            - lin_back : Use linear back propagation or a quantized gradient.
+    """
+    if dtype=="lin":
+        return LinQuant(fsr=fsr,bitwight=bitwight,with_sign=with_sign, lin_back=lin_back).apply(input)
+    elif dtype=="log":
+        return LogQuant(fsr=fsr,bitwight=bitwight,with_sign=with_sign, lin_back=lin_back).apply(input)
+    else:
+        raise RuntimeError("Only \'log\' and \'lin\' dtype are supported !")
+
+"""
+# TODO Remove
 def QuantDense(input, weight, bias=None, fsr=7, bitwight=3):
     class LinQuantDense(torch.autograd.Function):
         @staticmethod
@@ -106,3 +174,4 @@ def QuantConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, group
                 return grad_input, grad_weight  
 
     return _QuantConv2d.apply(input, weight, bias)
+"""

@@ -14,8 +14,13 @@ def _quantize(x, bits=3):
     with x in [0,1]  and quantize(x) in [0,1]
     and with k = bits
     """
-    two = torch.ones_like(x)*2
-    return ((1)/(torch.pow(two,bits)-1))*torch.round((torch.pow(two,bits)-1)*x)
+    if bits==1:
+        return torch.sign(x)
+    elif bits==32:
+        return x
+    else:
+        two = torch.ones_like(x)*2
+        return ((1)/(torch.pow(two,bits)-1))*torch.round((torch.pow(two,bits)-1)*x)
 
 
 def nnDorefaQuant(bitwight=3):
@@ -47,6 +52,28 @@ def DorefaQuant(x, bitwight=3):
         def backward(ctx, grad_ouput):
             return grad_ouput.clone()
     return _Quant.apply(x)
+
+
+def nnQuantWeight(bitwight=3):
+    class _QuantWeight(torch.nn.Module):
+        def __init__(self):
+            super(_QuantWeight, self).__init__()
+            self.bitwight = bitwight
+            self.quant_op =  nnDorefaQuant(bitwight)
+
+        def forward(self, x):
+            if self.bitwight==1:
+                E = torch.mean(torch.abs(x)).detach()
+                weight_q = self.quant_op(x / E) * E
+            elif self.bitwight==32:
+                return x
+            else:
+                weight = torch.tanh(x)
+                weight = weight / 2 / torch.max(torch.abs(weight)) + 0.5
+                weight_q = 2 * self.quant_op(weight) - 1
+            
+            return weight_q
+    return _QuantWeight()
 
 
 def QuantDense(bitwight=3):

@@ -1,7 +1,8 @@
 import torch
 from functions.common import front
 from device import device
-
+import warnings
+warnings.simplefilter("always",DeprecationWarning)
 """
 Implementation from ternary connect :
 https://arxiv.org/pdf/1510.03009.pdf
@@ -108,8 +109,11 @@ def TernaryDense(stochastic=False):
 
 def TernaryConv2d(stochastic=True, stride=1, padding=1, dilation=1, groups=1):
     """
+        **DEPRECATED**
         Return a Conv op with params given. Use Ternary to quantize weight before apply it.
     """
+    warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
+
     class _TernaryConv2d(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):
