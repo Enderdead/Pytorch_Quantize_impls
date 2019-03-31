@@ -1,6 +1,9 @@
 import torch
 from functions.common import front
 from device import device
+from grad.cuda_grad import *
+import warnings
+warnings.simplefilter("always",DeprecationWarning)
 
 """
 Implementation from Binary connect and Binary net :
@@ -98,9 +101,11 @@ class BinaryDense(torch.autograd.Function):
 
 def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
     """
+    **DEPRECATED**
     Return a Conv2d Op with parameters given.
     Apply a Deterministic binarization on weight only.
     """
+    warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
     class _BinaryConv2d(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):
