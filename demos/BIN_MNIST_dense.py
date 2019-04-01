@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-# 0.9623
+# 0.98
 from models.FullNet.binMNIST import BinMNIST
 import torch
 import torch.utils.data

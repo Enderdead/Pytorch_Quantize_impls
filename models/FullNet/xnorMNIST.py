@@ -1,24 +1,27 @@
 import torch 
 import torch.nn as nn
-from layers.binary_layers import LinearBin, ShiftNormBatch1d
-from functions import binary_connect
+from layers.xnor_layers import LinearXNOR, BinXNOR
+from functions import xnor_connect
 
-class BinMNIST(torch.nn.Module):
+class XNorMNIST(torch.nn.Module):
     def __init__(self, in_features, out_features, num_units=2048):
 
-        super(BinMNIST, self).__init__()
+        super(XNorMNIST, self).__init__()
         
-        self.linear1 = LinearBin(in_features, num_units)
-        self.norm1   =ShiftNormBatch1d(num_units, eps=1e-4, momentum=0.15)
+        self.linear1 = LinearXNOR(in_features, num_units)
+        self.norm1   = nn.BatchNorm1d(num_units, eps=1e-4, momentum=0.15)
 
-        self.linear2 = LinearBin(num_units, num_units)
-        self.norm2  = ShiftNormBatch1d(num_units, eps=1e-4, momentum=0.15)
+        self.quant2  = BinXNOR(num_units)
+        self.linear2 = LinearXNOR(num_units, num_units)
+        self.norm2  = nn.BatchNorm1d(num_units, eps=1e-4, momentum=0.15)
 
-        self.linear3 = LinearBin(num_units, num_units)
-        self.norm3   =ShiftNormBatch1d(num_units, eps=1e-4, momentum=0.15)
+        self.quant3  = BinXNOR(num_units)
+        self.linear3 = LinearXNOR(num_units, num_units)
+        self.norm3   = nn.BatchNorm1d(num_units, eps=1e-4, momentum=0.15)
 
-        self.linear4 = LinearBin(num_units, out_features)
-        self.norm4   =ShiftNormBatch1d(out_features, eps=1e-4, momentum=0.15)
+        self.quant4  = BinXNOR(num_units)
+        self.linear4 = LinearXNOR(num_units, out_features)
+        self.norm4   = nn.BatchNorm1d(out_features, eps=1e-4, momentum=0.15)
         
         self.activation     = nn.ReLU()
         self.act_end = nn.LogSoftmax()
@@ -46,16 +49,16 @@ class BinMNIST(torch.nn.Module):
 
         x = self.activation(self.linear1(x))
         x = self.norm1(x)
-        x = binary_connect.BinaryConnectDeterministic.apply(x)
+        x = self.quant2(x)
         
         x = self.activation(self.linear2(x))
         x = self.norm2(x)
-        x = binary_connect.BinaryConnectDeterministic.apply(x)
+        x = self.quant3(x)
 
 
         x = self.activation(self.linear3(x))
         x = self.norm3(x)
-        x = binary_connect.BinaryConnectDeterministic.apply(x)
+        x = self.quant4(x)
 
 
         x = self.linear4(x)

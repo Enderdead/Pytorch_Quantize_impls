@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-#.9833
+#.98
 from models.ConvNet.binMNIST_conv import BinMNIST
 import torch
 import torch.utils.data
@@ -16,7 +16,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 
-BATCH_SIZE = 200
+BATCH_SIZE = 64
 LEARNING_RATE = 0.001
 MOMENTUM = 0.6
 EPOCH = 600
