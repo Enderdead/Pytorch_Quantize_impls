@@ -10,8 +10,10 @@ from functions import binary_connect
 class LinearBin(torch.nn.Linear, QLayer):
     def __init__(self, in_features, out_features, bias=True, deterministic=True):
         torch.nn.Linear.__init__(self, in_features, out_features, bias=bias)
+        
         self.deterministic = deterministic
-
+        self.bin_op = binary_connect.BinaryConnectDeterministic if deterministic else binary_connect.BinaryConnectStochastic
+        
     def reset_parameters(self):
         self.weight.data.normal_(0, 1 * (sqrt(1. / self.in_features)))
         if self.bias is not None:
@@ -22,22 +24,63 @@ class LinearBin(torch.nn.Linear, QLayer):
         if not self.bias is None:
             self.bias.data.clamp_(-1, 1) 
         
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(self.bin_op.apply(self.weight).detach())
+    
     def forward(self, input):
-        if self.deterministic:
-            return torch.nn.functional.linear(input, binary_connect.BinaryConnectDeterministic.apply(self.weight), (self.bias))
-        return torch.nn.functional.linear(input, binary_connect.BinaryConnectStochastic.apply(self.weight), (self.bias))
-
+        if self.training:
+            return torch.nn.functional.linear(input, self.bin_op.apply(self.weight), (self.bias))
+        else:
+            return torch.nn.functional.linear(input, self.weight, (self.bias))
 
 class BinConv2d(torch.nn.Conv2d, QLayer):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True, deterministic=True):
+        r"""
+        Applies a 3D convolution over an input signal composed of several input planes.
+        Use a binarized weight to compute the convolution op. 
+
+        :param in_channels: description
+        :param out_channels: description
+        :param kernel_size: description
+        :param stride: description
+        :param padding: description
+        :param dilation: description
+        :param groups: description
+        :param bias: description
+        :param deterministic: description
+        """
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
                  padding=padding, dilation=dilation, groups=groups, bias=bias)
+
+        
         self.deterministic = deterministic
 
     def clamp(self):
+        """
+            Clamp reel weight between -1 and 1. 
+        """
         self.weight.data.clamp_(-1, 1)
+
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(self.bin_op.apply(self.weight).detach())
 
     def forward(self, input):
         if self.deterministic:

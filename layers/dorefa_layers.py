@@ -14,6 +14,17 @@ class LinearDorefa(torch.nn.Linear, QLayer):
         self.bitwight = weight_bit
         self.weight_op = dorefa_connect.nnQuantWeight(bitwight=weight_bit)
 
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy(self.weight_op.forward(self.weight).detach())
+
     def forward(self, input):
         return torch.nn.functional.linear(input, self.weight_op.forward(self.weight), self.bias)
 
@@ -23,6 +34,17 @@ class DorefaConv2d(torch.nn.Conv2d, QLayer):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
                  padding=padding, dilation=dilation, groups=groups, bias=True)
         self.weight_op = dorefa_connect.nnQuantWeight(bitwight=weight_bit)
+
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(self.weight_op.forward(self.weight).detach())
 
     def forward(self, input):
         out = torch.nn.functional.conv2d(input, self.weight_op.forward(self.weight), self.bias,self.stride, self.padding, self.dilation, self.groups)

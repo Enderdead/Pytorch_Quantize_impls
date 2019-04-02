@@ -13,11 +13,23 @@ class LinearQuant(torch.nn.Linear, QLayer):
     def clamp(self):
         self.weight.data.clamp_(-1*2**(self.fsr), 2**(self.fsr))
 
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(self.weight_op.forward(self.weight).detach())
+
     def reset_parameters(self):
         torch.nn.init.uniform_(self.weight, 2**(self.fsr-self.bitwight), 2**(self.fsr))
         self.weight.data.mul_( (torch.rand_like(self.weight)<0.5).type(self.weight.dtype)*2-1)
         if not self.bias is None:
             self.bias.data.zero_()
+
     def forward(self, input):
         out = torch.nn.functional.linear(input, self.weight_op.forward(self.weight), self.bias)
         return out
@@ -32,6 +44,17 @@ class QuantConv2d(torch.nn.Conv2d, QLayer):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
                  padding=padding, dilation=dilation, groups=groups, bias=bias)
         self.weight_op = log_lin_connect.nnQuant(dtype=dtype, fsr=fsr, bitwight=bitwight, with_sign=True, lin_back=True)
+
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(self.weight_op.forward(self.weight).detach())
 
     def reset_parameters(self):
         if self.bitwight==32:

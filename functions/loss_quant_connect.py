@@ -4,6 +4,26 @@ from device import device
 import warnings
 warnings.simplefilter("always",DeprecationWarning)
 
+
+def _proj_val(x, set):
+    x = x.repeat((set.size()[0],)+(1,)*len(x.size()))
+    x = x.permute(*(tuple(range(len(x.size())))[1:]  +(0,) ))
+    x = torch.abs(x-set)
+    x = torch.argmin(x, dim=len(x.size())-1, keepdim=False)
+    return set[x]
+
+def lin_proj(x, top=1, bottom=-1, size=5):
+    step  = (top-bottom)/size
+    lin_set = torch.arange(bottom, top+step,step=step).to(x.device)
+    return _proj_val(x, lin_set)
+
+def exp_proj(x, gamma=2, init=0.25, size=5):
+    exp_set = torch.ones(size*2).to(x.device)
+    for index in range(size):
+        exp_set[size-1-index] = init*(gamma**index)
+        exp_set[size+index]   = init*(gamma**index)
+    return _proj_val(x, exp_set)
+
 def lin_deriv(x, alpha, top=1,  bottom=-1, size=5):
     """
         Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
@@ -73,6 +93,7 @@ def exp_deriv(x, alpha, gamma=2, init=0.25, size=5):
 
 
 
+
 def QuantLinDense(size=5, bottom=-1, top=1):
     """
     Return a linear transformation op with this form: y=W.x+b
@@ -138,6 +159,7 @@ def QuantLogDense(gamma=2, init=0.25, size=5):
 
             return grad_input, grad_weight, grad_bias, None
     return _QuantLogDense
+
 
 
 

@@ -37,6 +37,16 @@ class LinearQuantLin(torch.nn.Module, QLayer):
     def set_alpha(self, alpha):
         self.alpha = torch.Tensor([alpha]).to(device)
 
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(loss_quant_connect.lin_proj(self.weight, bottom=self.bottom, top=self.top, size=self.size).detach())
 
     def forward(self, input):
         return self.linear_op.apply(input, self.weight, self.bias, self.alpha)
@@ -64,6 +74,17 @@ class LinearQuantLog(torch.nn.Module, QLayer):
         if self.bias is not None:
             self.bias.data.zero_()
 
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(loss_quant_connect.exp_proj(self.weight, gamma=self.gamma, init=self.init, size=self.size).detach())
+
     def clamp(self):
         self.weight.data.clamp_(-self.init*self.gamma**(self.size-1), self.init*self.gamma**(self.size-1))
         if not self.bias is None:
@@ -77,7 +98,7 @@ class LinearQuantLog(torch.nn.Module, QLayer):
         return self.linear_op.apply(input, self.weight, self.bias, self.alpha)
 
 
-class QuandConv2d(torch.nn.Conv2d, QLayer):
+class QuantConv2dLin(torch.nn.Conv2d, QLayer):
     def __init__(self, *args,  bottom=-1, top=1, size=5, alpha=1,  stride=1, padding=1, dilation=1, groups=1):
         torch.nn.Conv2d.__init__(self, *args,  stride=stride, padding=padding, dilation=dilation, groups=groups)
         self.top = top
@@ -85,6 +106,18 @@ class QuandConv2d(torch.nn.Conv2d, QLayer):
         self.size = size
         self.register_buffer("alpha", torch.Tensor([alpha]).to(device))
         self.conv_op = loss_quant_connect.QuantConv2d(size=self.size, bottom=self.bottom, top=self.top, stride=stride, padding=padding, dilation=dilation, groups=groups)
+
+
+    def train(self, mode=True):
+        if self.training==mode:
+            return
+        if mode:
+            self.weight.data.copy_(self.weight.org.data)
+        else: # Eval mod
+            if not hasattr(self.weight,'org'):
+                self.weight.org=self.weight.data.clone()
+            self.weight.org.data.copy_(self.weight.data)
+            self.weight.data.copy_(loss_quant_connect.lin_proj(self.weight, bottom=self.bottom, top=self.top, size=self.size).detach())
 
 
     def reset_parameters(self):
