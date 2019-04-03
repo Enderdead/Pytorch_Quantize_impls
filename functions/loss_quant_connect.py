@@ -93,6 +93,35 @@ def exp_deriv(x, alpha, gamma=2, init=0.25, size=5):
 
 
 
+def QuantWeightLin(top=1,  bottom=-1, size=5):
+    class _QuantWeightOp(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, weight, alpha):
+            ctx.save_for_backward(weight, alpha)
+            return weight
+        
+        @staticmethod
+        def backward(ctx, output_grad):
+            weight, alpha = ctx.saved_variables
+            input_grad  = output_grad.clone()
+            input_grad -= lin_deriv(weight, alpha,  top,  bottom, size)
+            return input_grad, None
+    return _QuantWeightOp
+
+def QuantWeightExp(gamma=2, init=0.25, size=5):
+    class _QuantWeightOp(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, weight, alpha):
+            ctx.save_for_backward(weight, alpha)
+            return weight
+        
+        @staticmethod
+        def backward(ctx, output_grad):
+            weight, alpha = ctx.saved_variables
+            input_grad  = output_grad.clone()
+            input_grad -= lin_deriv(weight, alpha, gamma, init, size)
+            return input_grad, None
+    return _QuantWeightOp
 
 def QuantLinDense(size=5, bottom=-1, top=1):
     """
