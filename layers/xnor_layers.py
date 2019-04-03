@@ -6,6 +6,12 @@ warnings.simplefilter("always",DeprecationWarning)
 warnings.warn("Module not finished due to  gradient implementation on conv layer !", ImportWarning)
 
 class LinearXNOR(torch.nn.Linear, QLayer):
+    @staticmethod
+    def convert(other, dtype="lin", dim=[0,1]):
+        if not isinstance(other, torch.nn.Linear):
+            raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
+        return LinearXNOR(other.in_features, other.out_features, False if other.bias is None else True, dim=dim)
+
     def __init__(self, in_features, out_features, bias=True, dim=[0,1], **kwargs):
         super(LinearXNOR, self).__init__(in_features, out_features, bias=bias, **kwargs)
         self.lin_op = xnor_connect.XNORDense(dim=dim)
@@ -27,6 +33,15 @@ class LinearXNOR(torch.nn.Linear, QLayer):
         return self.lin_op.apply(input, self.weight, self.bias)
 
 class XNORConv2d(torch.nn.Conv2d, QLayer):
+
+    @staticmethod
+    def convert(other, dim=[0,1], quant_input=False):
+        if not isinstance(other, torch.nn.Conv2d):
+            raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
+        return XNORConv2d(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
+                         padding=other.padding, dilation=other.dilatation, groups=other.groups,
+                         bias=False if other.bias is None else True, dim=dim, quant_input=quant_input)
+
 
     def __init__(self, *kargs, dim=[0,1], quant_input=False, **kwargs):
         torch.nn.Conv2d.__init__(self, *kargs, **kwargs)

@@ -8,6 +8,12 @@ from layers.common import QLayer
 from functions import terner_connect
 
 class LinearTer(torch.nn.Linear, QLayer):
+    @staticmethod
+    def convert(other, dtype="lin", deterministic=True):
+        if not isinstance(other, torch.nn.Linear):
+            raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
+        return LinearTer(other.in_features, other.out_features, False if other.bias is None else True, deterministic=deterministic)
+
     def __init__(self, in_features, out_features, bias=True, deterministic=True):
         torch.nn.Linear.__init__(self, in_features, out_features, bias=bias)
         self.deterministic = deterministic
@@ -45,6 +51,14 @@ class LinearTer(torch.nn.Linear, QLayer):
 
 
 class TerConv2d(torch.nn.Conv2d, QLayer):
+    @staticmethod
+    def convert(other, deterministic=True):
+        if not isinstance(other, torch.nn.Conv2d):
+            raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
+        return TerConv2d(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
+                         padding=other.padding, dilation=other.dilatation, groups=other.groups,
+                         bias=False if other.bias is None else True, deterministic=deterministic)
+
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True, deterministic=True):

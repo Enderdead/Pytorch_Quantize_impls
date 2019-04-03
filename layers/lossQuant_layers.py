@@ -9,6 +9,12 @@ from layers.common import QLayer
 from functions import loss_quant_connect
 
 class LinearQuantLin(torch.nn.Module, QLayer):
+    @staticmethod
+    def convert(other, bottom=-1, top=1, size=5, alpha=1):
+        if not isinstance(other, torch.nn.Linear):
+            raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
+        return LinearQuantLin(other.in_features, other.out_features, False if other.bias is None else True, bottom=bottom, top=top, size=size, alpha=alpha)
+
     def __init__(self, in_features, out_features, bias=True, bottom=-1, top=1, size=5, alpha=1):
         torch.nn.Module.__init__(self)
         self.in_features = in_features
@@ -53,6 +59,12 @@ class LinearQuantLin(torch.nn.Module, QLayer):
 
 
 class LinearQuantLog(torch.nn.Module, QLayer):
+    @staticmethod
+    def convert(other, gamma=2, init=0.25, size=5, alpha=1):
+        if not isinstance(other, torch.nn.Linear):
+            raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
+        return LinearQuantLin(other.in_features, other.out_features, False if other.bias is None else True, gamma=gamma, init=init, size=size, alpha=alpha)
+
     def __init__(self, in_features, out_features, bias=True, gamma=2, init=0.25, size=5, alpha=1):
         super(LinearQuantLog, self).__init__()
         self.in_features = in_features
