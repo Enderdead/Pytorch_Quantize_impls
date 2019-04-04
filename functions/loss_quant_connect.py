@@ -39,15 +39,15 @@ def lin_deriv(x, alpha, top=1,  bottom=-1, size=5):
         Here an example of this function with size = 2 and alpha = 1.
      y
     /\                 +_
-     |                 | +_
-     |                 |   +_
-     |                 |     +_
-     |                 |       +_
+     |                   +_
+     |                     +_
+     |                       +_
+     |                         +_
      ---------+--------+---------+------> x
-       bottom  +_      |          top
-                 +_    | 
-                   +_  |
-                     +_|
+       bottom  +_                 top
+                 +_      
+                   +_   
+                     +_ 
                        +           
                                    
     """
