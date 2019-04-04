@@ -56,7 +56,7 @@ class TerConv2d(torch.nn.Conv2d, QLayer):
         if not isinstance(other, torch.nn.Conv2d):
             raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
         return TerConv2d(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
-                         padding=other.padding, dilation=other.dilatation, groups=other.groups,
+                         padding=other.padding, dilation=other.dilation, groups=other.groups,
                          bias=False if other.bias is None else True, deterministic=deterministic)
 
 

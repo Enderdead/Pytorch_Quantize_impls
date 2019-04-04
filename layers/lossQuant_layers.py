@@ -111,8 +111,17 @@ class LinearQuantLog(torch.nn.Module, QLayer):
 
 
 class QuantConv2dLin(torch.nn.Conv2d, QLayer):
-    def __init__(self, in_channels, out_channels, kernel_size,  bottom=-1, top=1, size=5, alpha=1,  stride=1, padding=1, dilation=1, groups=1):
-        torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,  stride=stride, padding=padding, dilation=dilation, groups=groups)
+
+    @staticmethod
+    def convert(other, bottom=-1, top=1, size=5, alpha=1):
+        if not isinstance(other, torch.nn.Conv2d):
+            raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
+        return QuantConv2dLin(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
+                         padding=other.padding, dilation=other.dilation, groups=other.groups,
+                         bias=False if other.bias is None else True, bottom=bottom, top=top, size=size, alpha=alpha)
+
+    def __init__(self, in_channels, out_channels, kernel_size,  bottom=-1, top=1, size=5, alpha=1,  stride=1, padding=1, dilation=1, groups=1, bias=True):
+        torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,  stride=stride, padding=padding, dilation=dilation, groups=groups, bias=bias)
         self.top = top
         self.bottom = bottom
         self.size = size
@@ -150,6 +159,15 @@ class QuantConv2dLin(torch.nn.Conv2d, QLayer):
         return out
 
 class QuantConv2dLog(torch.nn.Conv2d, QLayer):
+
+    @staticmethod
+    def convert(other, gamma=2, init=0.25, size=5, alpha=1):
+        if not isinstance(other, torch.nn.Conv2d):
+            raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
+        return QuantConv2dLog(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
+                         padding=other.padding, dilation=other.dilation, groups=other.groups,
+                         bias=False if other.bias is None else True,  gamma=gamma, init=init, size=size, alpha=alpha)
+
     def __init__(self, in_channels, out_channels, kernel_size,  gamma=2, init=0.25, size=5, alpha=1,  stride=1, padding=1, dilation=1, groups=1):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,  stride=stride, padding=padding, dilation=dilation, groups=groups)
         self.gamma = gamma

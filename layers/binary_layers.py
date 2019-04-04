@@ -54,7 +54,7 @@ class BinConv2d(torch.nn.Conv2d, QLayer):
         if not isinstance(other, torch.nn.Conv2d):
             raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
         return BinConv2d(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
-                         padding=other.padding, dilation=other.dilatation, groups=other.groups,
+                         padding=other.padding, dilation=other.dilation, groups=other.groups,
                          bias=False if other.bias is None else True, deterministic=deterministic)
 
 
@@ -64,14 +64,14 @@ class BinConv2d(torch.nn.Conv2d, QLayer):
         Applies a 3D convolution over an input signal composed of several input planes.
         Use a binarized weight to compute the convolution op. 
 
-        :param in_channels: description
-        :param out_channels: description
-        :param kernel_size: description
-        :param stride: description
-        :param padding: description
-        :param dilation: description
-        :param groups: description
-        :param bias: description
+        :param in_channels: Number of channels in the input image
+        :param out_channels: Number of channels produced by the convolution
+        :param kernel_size: Size of the convolving kernel
+        :param stride: Stride of the convolution. Default: 1
+        :param padding: Zero-padding added to both sides of the input. Default: 0
+        :param dilation: Spacing between kernel elements. Default: 1
+        :param groups: Number of blocked connections from input channels to output channels. Default: 1
+        :param bias: If ``True``, adds a learnable bias to the output. Default: ``True``
         :param deterministic: description
         """
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
