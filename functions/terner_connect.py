@@ -10,14 +10,15 @@ https://arxiv.org/pdf/1510.03009.pdf
 
 
 class TernaryConnectDeterministic(torch.autograd.Function):
-    """
-        Ternary deterministic op.
+    r"""
+    Ternary deterministic op. This class perform the quantize function and the backprob.
+    ..
         Forward : 
                   {1  if  x > 0.5
             x_t = {0  if |x|< 0.5
                   {-1 if  x <-0.5
         Backward : 
-            d x_t / d x  = 1_{|r|=<1}
+            d x_t / d x  = 1_{|r|=<1} 
     """
     @staticmethod
     def forward(ctx, input):
@@ -35,14 +36,15 @@ class TernaryConnectDeterministic(torch.autograd.Function):
 
 class TernaryConnectStochastic(torch.autograd.Function):
     """
-        Ternary Stochastic op.
+    Ternary Stochastic op. This class perform the quantize function and the backprob.
+    ..
         Forward : 
             if x<0 :
                 x_t = { 0 with prob of 1 + x
-                      {-1 with prob of -x
+                    {-1 with prob of -x
             if x>=0:
                 x_t = { 0 with prob of 1 - x 
-                      { 1 with prob of x
+                        { 1 with prob of x
         Backward : 
             d x_t / d x  = 1_{|r|=<1}
     """
@@ -67,6 +69,8 @@ def TernaryConnect(stochastic=False):
     """
     A torch.nn.Module is return with a Ternary op inside.
     Usefull on Sequencial instanciation.
+
+    :param stochastic: use a Stochastic way or not.
     """
     act = TernaryConnectStochastic if stochastic else TernaryConnectDeterministic
     return front(act)
@@ -74,7 +78,7 @@ def TernaryConnect(stochastic=False):
 
 def TernaryDense(stochastic=False):
     """
-        Return a Linear op with Ternary quantization.
+    Return a Linear op with Ternary quantization apply on it weight.
     """
     class _TernaryDense(torch.autograd.Function):
         @staticmethod
@@ -109,8 +113,8 @@ def TernaryDense(stochastic=False):
 
 def TernaryConv2d(stochastic=True, stride=1, padding=1, dilation=1, groups=1):
     """
-        **DEPRECATED**
-        Return a Conv op with params given. Use Ternary to quantize weight before apply it.
+    .. warning:: **DEPRECATED**
+    Return a Conv op with params given. Use Ternary to quantize weight before apply it.
     """
     warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
 

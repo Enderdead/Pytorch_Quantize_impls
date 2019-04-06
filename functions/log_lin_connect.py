@@ -7,19 +7,22 @@ https://arxiv.org/pdf/1603.01025.pdf
 """
 
 def LogQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
-    """
+    r"""
         Generate a Quantization op using Log method from Imp. CNN using Log Data Rep.
 
-        Forward :
-            Quant(x) = 2^(clamp(round(ln_2(|x|)),fsr-2**bitwight, fsr))
-        BackWard (if not lin_back):
-            grad_input = sign(grad_output)* 2^(clamp(round(ln_2(|grad_output|)),fsr-2**bitwight, fsr))
+        :param fsr: Max value of the output.
+        :param bitwight:  Numbers of bits on this quant op.
+        :param with_sign: Add a sign bit to quant op.
+        :param lin_back: Use linear back propagation or a quantized gradient.
 
-        params:
-            - fsr : Max value of the output.
-            - bitwight :  Numbers of bits on this quant op.
-            - with_sign : Add a sign bit to quant op.
-            - lin_back : Use linear back propagation or a quantized gradient.
+        Forward:
+
+        :math:`Quant(x) = 2^{clamp(round(ln_2(|x|)},fsr-2^{bitwight}, fsr))`
+
+        BackWard (if not lin_back):
+
+        :math:`grad\_input = sign(grad_output)* 2^{clamp(round(ln_2(|grad\_output|)},fsr-2^{bitwight}, fsr))`
+
     """
     class _LogQuant(torch.autograd.Function):
         @staticmethod
@@ -38,18 +41,20 @@ def LogQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
 
 def LinQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
     """
-        Generate a Quantization op using Lin method from Imp. CNN using Log Data Rep.
-        
-        Forward :
-            Quant(x) = Clamp(Round(x/step)*step,0,2^(FSR)) with step = 2^{FSR-bitwight}
-        BackWard (if not lin_back):
-            grad_input = sign(grad_output)* Clamp(Round(grad_output/step)*step,0,2^(FSR))
+    Generate a Quantization op using Lin method from Imp. CNN using Log Data Rep.
 
-        params:
-            - fsr : Max value of the output.
-            - bitwight :  Numbers of bits on this quant op.
-            - with_sign : Add a sign bit to quant op.
-            - lin_back : Use linear back propagation or a quantized gradient.
+    :param fsr: Max value of the output.
+    :param bitwight:  Numbers of bits on this quant op.
+    :param with_sign: Add a sign bit to quant op.
+    :param lin_back: Use linear back propagation or a quantized gradient.
+    
+    Forward :
+
+    :math:`Quant(x) = Clamp(Round(x/step)*step,0,2^{FSR}) with step = 2^{FSR-bitwight}`
+    
+    BackWard (if not lin_back):
+
+    :math:`grad\_input = sign(grad_output)* Clamp(Round(grad\_output/step)*step,0,2^{FSR})`
     """
     class _LinQuant(torch.autograd.Function):
         @staticmethod
@@ -78,14 +83,14 @@ def LinQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
 
 def nnQuant(dtype="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
     """
-        Return a Torch Module fronter with Quantization op inside. Suport Lin and Log quantization.
+    Return a Torch Module fronter with Quantization op inside. Suport Lin and Log quantization.
 
-        params:
-            - dtype: Use \'lin\' or \'log\' method.
-            - fsr : Max value of the output.
-            - bitwight :  Numbers of bits on this quant op.
-            - with_sign : Add a sign bit to quant op.
-            - lin_back : Use linear back propagation or a quantized gradient.
+    :param dtype: Use \'lin\' or \'log\' method.
+    :param fsr: Max value of the output.
+    :param bitwight:  Numbers of bits on this quant op.
+    :param with_sign: Add a sign bit to quant op.
+    :param lin_back: Use linear back propagation or a quantized gradient.
+
     """
     if dtype == "lin":
         return front(LinQuant(fsr=fsr, bitwight=bitwight, with_sign=with_sign, lin_back=lin_back))
@@ -97,14 +102,13 @@ def nnQuant(dtype="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
 
 def Quant(input, dtype="lin", fsr=7, bitwight=3, with_sign=True, lin_back=True):
     """
-        Apply a quantization with backprob support on input tensor.
-        
-        params:
-            - dtype: Use \'lin\' or \'log\' method.
-            - fsr : Max value of the output.
-            - bitwight :  Numbers of bits on this quant op.
-            - with_sign : Add a sign bit to quant op.
-            - lin_back : Use linear back propagation or a quantized gradient.
+    Apply a quantization with backprob support on input tensor.
+    
+    :param dtype: Use \'lin\' or \'log\' method.
+    :param fsr: Max value of the output.
+    :param bitwight:  Numbers of bits on this quant op.
+    :param with_sign: Add a sign bit to quant op.
+    :param lin_back: Use linear back propagation or a quantized gradient.
     """
     if dtype=="lin":
         return LinQuant(fsr=fsr,bitwight=bitwight,with_sign=with_sign, lin_back=lin_back).apply(input)

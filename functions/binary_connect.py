@@ -13,19 +13,25 @@ https://arxiv.org/pdf/1511.00363.pdf
 
 class BinaryConnectDeterministic(torch.autograd.Function):
     """
-    Binarizarion deterministic op with backprob.
-    Forward : 
-        r_b  = sign(r)
-    Backward : 
-        d r_b/d r = 1_{|r|=<1}
+    Binarizarion deterministic op with backprob.\n
+    Forward : \n
+    :math:`r_b  = sign(r)`\n
+    Backward : \n
+    :math:`d r_b/d r = 1_{|r|=<1}`
     """
     @staticmethod
     def forward(ctx, input):
+        """
+        Apply stochastic binarization on input tensor.
+        """
         ctx.save_for_backward(input)
         return torch.sign(input)
 
     @staticmethod
     def backward(ctx, grad_output):
+        """
+        Compute the back propagation of the binarization op.
+        """
         input, = ctx.saved_tensors
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
@@ -35,14 +41,17 @@ class BinaryConnectDeterministic(torch.autograd.Function):
 
 class BinaryConnectStochastic(torch.autograd.Function):
     """
-    Binarizarion stochastic op with backprob.
-    Forward : 
-        r_b  = 1 with prob of hardsigmoid(r)
-    Backward : 
-        d r_b/d r = 1_{|r|=<1}
+    Binarizarion stochastic op with backprob.\n
+    Forward : \n
+    :math:`r_b  = 1` with prob of :math:`hardsigmoid(r)`\n
+    Backward : \n
+    :math:`d r_b/d r = 1_{|r|=<1}`\n
     """
     @staticmethod
     def forward(ctx, input):
+        """
+        Apply stochastic binarization on input tensor.
+        """
         ctx.save_for_backward(input)
         # z ~ uniform([0,1])
         z = torch.rand_like(input, requires_grad=False)
@@ -53,6 +62,9 @@ class BinaryConnectStochastic(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        """
+        Compute the back propagation of the binarization op.
+        """
         input, = ctx.saved_tensors
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
@@ -63,6 +75,9 @@ def BinaryConnect(stochastic=False):
     """
     A torch.nn.Module is return with a Binarization op inside.
     Usefull on Sequencial instanciation.
+
+    :param stochastic: Use Determinist or stochastic binarization.
+    
     """
     act = BinaryConnectStochastic if stochastic else BinaryConnectDeterministic
     return front(act)
@@ -100,7 +115,7 @@ class BinaryDense(torch.autograd.Function):
 
 def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
     """
-    **DEPRECATED**
+    .. warning:: **DEPRECATED**
     Return a Conv2d Op with parameters given.
     Apply a Deterministic binarization on weight only.
     """
@@ -141,10 +156,14 @@ def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
 
 def AP2(x):
     """
-    Return a power 2 approximation of x.
-    return  sign(x) × 2round(log2jxj)
+    Return a power 2 approximation of x.\n
+    return :\n
+    .. math:: sign(x) × 2round(log2(x))\n
 
-    Operator introduced here :  https://arxiv.org/pdf/1602.02830.pdf
+    Operator introduced here :  https://arxiv.org/pdf/1602.02830.pdf\n
+
+    :param x: Tensor
+
     """
     two = torch.ones_like(x)*2
     return torch.sign(x) * torch.pow(two,torch.round(torch.log2(torch.abs(x))))
@@ -153,7 +172,7 @@ def AP2(x):
 
 class ShiftBatch(torch.autograd.Function):
     """
-    Primivite operator for batch normalizarion using shift operator instead of divide op.
+    Primivite operator for batch normalizarion using shift operator instead of divide op.\n
     """
     @staticmethod
     def forward(ctx, input, running_mean, running_var, weight, bias, eps):

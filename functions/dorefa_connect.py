@@ -1,5 +1,7 @@
 import torch
 from functions.common import front
+import warnings
+warnings.simplefilter("always",DeprecationWarning)
 """
 Implementation of Dorefa net :
 https://arxiv.org/pdf/1606.06160.pdf
@@ -10,7 +12,7 @@ def _quantize(x, bits=3):
     """
     Quantize operator used in all quantization of Dorefa net.
 
-    quantize(x) =  round((2^k -1)x)/(2^k -1)   
+    :math:`quantize(x) =  round((2^k -1)x)/(2^k -1)`
     with x in [0,1]  and quantize(x) in [0,1]
     and with k = bits
     """
@@ -23,38 +25,58 @@ def _quantize(x, bits=3):
         return ((1)/(torch.pow(two,bits)-1))*torch.round((torch.pow(two,bits)-1)*x)
 
 
-def nnDorefaQuant(bitwight=3):
+def nnDorefaQuant(bitwight=3, with_sign=False):
     """
-    A Torch.nn.Module fronter with a Quant operator inside.
-    Forward : 
-        quantize(x) see _quantize()
-    Backward : 
-        dx_q/dx  = 1
+    Return a Torch.nn.Module fronter with a Quant operator inside.\n
+    :param bitwight: Number of bits to use for quantization op.
+    :param with_sign: Add a sign bit or not.
+    Forward : \n
+    :math:`quantize(x)` see _quantize() \n
+    Backward : \n
+    :math:`dx_q/dx  = 1`\n
     """
     class _Quant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            return _quantize(input, bits=bitwight)
+            if with_sign:
+                return torch.sign(input)*_quantize(input, bits=bitwight)
+            else:
+                return torch.sign(input)*_quantize(input, bits=bitwight)
         def backward(ctx, grad_ouput):
             return grad_ouput.clone()
     return front(_Quant)
    
 
 
-def DorefaQuant(x, bitwight=3):
+def DorefaQuant(x, bitwight=3, with_sign=False):
     """
-        Apply a quantize op on x with bitwight.
+    Apply a quantize op on x.
+    :param bitwight: Number of bits to use for quantization op.
+    :param with_sign: Add a sign bit or not.
     """
     class _Quant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            return _quantize(input.clamp(0,1), bits=bitwight)
+            if with_sign:
+                return torch.sign(input)*_quantize(input.clamp(0,1), bits=bitwight)
+            else:
+                return _quantize(input.clamp(0,1), bits=bitwight)
         def backward(ctx, grad_ouput):
             return grad_ouput.clone()
     return _Quant.apply(x)
 
 
 def nnQuantWeight(bitwight=3):
+    r"""
+    Return a Module fronter with quantize op for layer's weight.
+    This Op include take any real weight range.
+
+    :param bitwight: Number of bits to use for quantization op (without bit sign)
+
+    Forward : 
+    :math:`2*quantize_{k}(\frac{ tanh(W)}{2.max( | tanh(W) |)}+\frac{1}{2} )-1`   
+    """
+
     class _QuantWeight(torch.nn.Module):
         def __init__(self):
             super(_QuantWeight, self).__init__()
@@ -78,7 +100,10 @@ def nnQuantWeight(bitwight=3):
 
 def QuantDense(bitwight=3):
     """ 
-        Return a Linear op with a Dorefa quantization on weight given.
+    Applies a linear transformation to the incoming data: y=W_b.x+b
+    With W_b a quantized transformation of W.
+
+    :param bitwight: Number of bits to use for quantization op (without bit sign)
     """
     class _QuantDense(torch.autograd.Function):
         @staticmethod
@@ -111,9 +136,11 @@ def QuantDense(bitwight=3):
 
 def QuantConv2d(stride=1, padding=1, dilation=1, groups=1, bitwight=3):
     """
-        Return a Conv2d op with settings given.
-        If bitwight=1, return a XNOR like op.
+    .. warning:: **DEPRECATED**
+    Return a Conv2d op with settings given.
+    If bitwight=1, return a XNOR like op.
     """
+    warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
     class _QuantConv2d(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):

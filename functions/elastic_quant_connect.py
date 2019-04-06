@@ -26,29 +26,30 @@ def exp_proj(x, gamma=2, init=0.25, size=5):
 
 def lin_deriv(x, alpha, top=1,  bottom=-1, size=5):
     """
-        Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
-        There's values start from bottom and finish at top, and they have a  unifom  step between each other.
+    Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
+    There's values start from bottom and finish at top, and they have a  unifom  step between each other.
 
-        params :
-            x : tensor used to return y.
-            alpha  : coef for the Sawtooth function
-            bottom : Lower value with null output.
-            top    : Upper value with null output.
-            size   : Number of values with null output on this function.
+    :param x: tensor used to return y.
+    :param alpha: coef for the Sawtooth function
+    :param bottom: Lower value with null output.
+    :param top: Upper value with null output.
+    :param size: Number of values with null output on this function.
 
-        Here an example of this function with size = 2 and alpha = 1.
-     y
-    /\                 +_
-     |                   +_
-     |                     +_
-     |                       +_
-     |                         +_
-     ---------+--------+---------+------> x
-       bottom  +_                 top
-                 +_      
-                   +_   
-                     +_ 
-                       +           
+    Here an example of this function with size = 2 and alpha = 1. 
+
+    ..
+         y
+        /\                 +_
+         |                   +_
+         |                     +_
+         |                       +_
+         |                         +_
+         ---------+--------+---------+------> x
+           bottom  +_                 top
+                     +_      
+                       +_   
+                         +_ 
+                           +           
                                    
     """
     delta = (top-bottom)/(size-1)
@@ -59,24 +60,29 @@ def lin_deriv(x, alpha, top=1,  bottom=-1, size=5):
 
 
 def exp_deriv(x, alpha, gamma=2, init=0.25, size=5):
-    """
-        Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
-        Roots values are computed with a geometrical sequence with init value = [init, -init] and scale factor = gamma.  
+    r"""
+    Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
+    Roots values are computed with a geometrical sequence with init value = [init, -init] and scale factor = gamma.  
         
-        params :
-            x : tensor used to return y.
-            alpha  : coef for the Sawtooth function
-            bottom : Lower value with null output.
-            top    : Upper value with null output.
-            size   : Number of values with null output on this function.
+    :param x: tensor used to return y.
+    :param alpha : coef for the Sawtooth function
+    :param bottom: Lower value with null output.
+    :param top   : Upper value with null output.
+    :param size  : Number of values with null output on this function.
 
-        Example of Root values : 
-        root_x = [-init, +init]
-        root_x = [-init*gamma, -init, +init, +init*gamma]
-        root_x = [-init*gamma**2, -init*gamma, -init, +init, +init*gamma, +init*gamma**2]
-            .
-            .
-            .    
+    Example of Root values : 
+
+    root_x = [-init, +init]
+
+    root_x = [-init*gamma, -init, +init, +init*gamma]
+
+    root_x = [-init*gamma**2, -init*gamma, -init, +init, +init*gamma, +init*gamma**2]
+
+        .
+        
+        .
+
+        .  
                            
     """
     res = torch.zeros_like(x)
