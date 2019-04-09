@@ -96,7 +96,7 @@ def TernaryDense(stochastic=False):
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, weight_t, bias = ctx.saved_variables
+            input, weight, weight_t, bias = ctx.saved_tensors
             grad_input = grad_weight = grad_bias = None
             if ctx.needs_input_grad[0]:
                 grad_input = grad_output.mm(weight_t)
@@ -134,7 +134,7 @@ def TernaryConv2d(stochastic=True, stride=1, padding=1, dilation=1, groups=1):
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, weight_t, bias = ctx.saved_variables
+            input, weight, weight_t, bias = ctx.saved_tensors
 
             grad_input = grad_weight = grad_bias = None
 

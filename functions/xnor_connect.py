@@ -28,7 +28,7 @@ def _quantOpXnor(dim=1):
                 return torch.sign(input)*mean.view(form_mean)
         @staticmethod
         def backward(ctx, grad_outputs):
-            input, mean = ctx.saved_variables
+            input, mean = ctx.saved_tensors
             sgn_input = torch.sign(input)
             if dim<0:
                 return sgn_input*torch.mean(grad_outputs*sgn_input) + grad_outputs*mean
@@ -117,7 +117,7 @@ def XNORDense(dim=[0,1]):
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, mean, bias = ctx.saved_variables
+            input, weight, mean, bias = ctx.saved_tensors
             weight_q = torch.sign(weight)*mean
             grad_input = grad_weight = grad_bias = None
             if ctx.needs_input_grad[0]:
@@ -147,7 +147,7 @@ def XNORConv2d(dim=[0,1], quant_input=False,  stride=1, padding=1, dilation=1, g
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, mean, bias = ctx.saved_variables
+            input, weight, mean, bias = ctx.saved_tensors
 
             weight_b = torch.sign(weight)*mean
             grad_input = grad_weight = grad_bias = None

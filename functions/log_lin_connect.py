@@ -131,7 +131,7 @@ def QuantDense(input, weight, bias=None, fsr=7, bitwight=3):
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, bias = ctx.saved_variables
+            input, weight, bias = ctx.saved_tensors
             weight_b = torch.sign(weight)
             grad_input = grad_weight = grad_bias = None
             if ctx.needs_input_grad[0]:
@@ -158,7 +158,7 @@ def QuantConv2d(input, weight, bias=None, stride=1, padding=1, dilation=1, group
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, bias = ctx.saved_variables
+            input, weight, bias = ctx.saved_tensors
             step = torch.FloatTensor([2]).pow(fsr-bitwight).to(device)
             weight_q = torch.sign(weight)*torch.pow(torch.ones_like(weight)*2, torch.clamp(torch.round(torch.log2(torch.abs(weight))), fsr-2**bitwight ,fsr )) 
 

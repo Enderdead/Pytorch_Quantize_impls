@@ -2,7 +2,7 @@ import torch
 from functions.common import front
 from device import device
 import warnings
-warnings.simplefilter("always",DeprecationWarning)
+#warnings.simplefilter("always",DeprecationWarning)
 
 
 def _proj_val(x, set):
@@ -19,8 +19,11 @@ def _proj_val(x, set):
     return set[x]
 
 def lin_proj(x, top=1, bottom=-1, size=5):
-    step  = (top-bottom)/size
-    lin_set = torch.arange(bottom, top+step,step=step).to(x.device)
+    step  = (top-bottom)/(size-1)
+    try:
+        lin_set = torch.arange(bottom, top+step,step=step).to(x.device)
+    except RuntimeError:
+        print(top, bottom, size)
     return _proj_val(x, lin_set)
 
 def exp_proj(x, gamma=2, init=0.25, size=5):
@@ -60,8 +63,10 @@ def lin_deriv_l2(x, alpha, top=1,  bottom=-1, size=5):
     """
     delta = (top-bottom)/(size-1)
     res = torch.zeros_like(x)
+
     for i in range(size):
-        res += (-alpha*x +(bottom+i*delta)*alpha)*(x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta-delta/2)).float()
+        res += (-alpha*x +(bottom+i*delta)*alpha)* (x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta-delta/2)).float()
+
     return res
 
 
@@ -100,7 +105,7 @@ def exp_deriv_l2(x, alpha, gamma=2, init=0.25, size=5):
         cur *=gamma
         res += -alpha * (x - cur)* (x > (cur + previous) / 2).float() *(x < (cur + gamma*cur)/2).float()
         res +=  -alpha *(x + cur)* (x < (-cur +- previous) / 2).float() *(x > (-cur + -gamma*cur)/2).float()
-    
+
     return res
 
 
@@ -108,8 +113,8 @@ def lin_deriv_l1(x,beta,top=1, bottom=-1, size=5):
     delta = (top-bottom)/(size-1)
     res = torch.zeros_like(x)
     for i in range(size):
-        res += beta*(x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta)).float()
-        res -= beta*(x<(bottom+(i)*delta)).float()*(x>(bottom+(i)*delta-delta/2)).float()
+        res -= beta*(x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta)).float()
+        res += beta*(x<(bottom+(i)*delta)).float()*(x>(bottom+(i)*delta-delta/2)).float()
     return res
 
 
@@ -139,7 +144,7 @@ def QuantWeightLin(top=1,  bottom=-1, size=5):
         
         @staticmethod
         def backward(ctx, output_grad):
-            weight, alpha, beta = ctx.saved_variables
+            weight, alpha, beta = ctx.saved_tensors
             input_grad  = output_grad.clone()
             input_grad -= lin_deriv_l2(weight, alpha,  top,  bottom, size)
             input_grad -= lin_deriv_l1(weight, beta,  top,  bottom, size)
@@ -155,7 +160,7 @@ def QuantWeightExp(gamma=2, init=0.25, size=5):
         
         @staticmethod
         def backward(ctx, output_grad):
-            weight, alpha, beta = ctx.saved_variables
+            weight, alpha, beta = ctx.saved_tensors
             input_grad  = output_grad.clone()
             input_grad -= lin_deriv_l2(weight, alpha, gamma, init, size)
             input_grad -= lin_deriv_l1(weight, beta, gamma, init, size)
@@ -171,14 +176,14 @@ def QuantLinDense(size=5, bottom=-1, top=1):
     class _QuantLinDense(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias, alpha, beta):
-            alpha.to(device)
-            beta.to(device)
+            alpha.to(weight.device)
+            beta.to(weight.device)
             ctx.save_for_backward(input, weight, bias, alpha, beta)
             return torch.nn.functional.linear(input, weight, bias)
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, bias, alpha, beta = ctx.saved_variables
+            input, weight, bias, alpha, beta = ctx.saved_tensors
             grad_input = grad_weight = grad_bias = None
 
             if ctx.needs_input_grad[0]:
@@ -186,13 +191,13 @@ def QuantLinDense(size=5, bottom=-1, top=1):
 
             if ctx.needs_input_grad[1]:
                 grad_weight = grad_output.t().mm(input)
-                grad_weight -= lin_deriv_l2(weight, alpha=alpha, bottom=bottom, top=top)
-                grad_weight -= lin_deriv_l1(weight, beta=beta, bottom=bottom, top=top)
+                grad_weight -= lin_deriv_l2(weight, alpha=alpha, bottom=bottom, top=top, size=size)
+                grad_weight -= lin_deriv_l1(weight, beta=beta, bottom=bottom, top=top, size=size)
 
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0)
-                grad_bias -= lin_deriv_l2(bias, alpha=alpha, bottom=bottom, top=top)
-                grad_bias -= lin_deriv_l1(bias, beta=beta, bottom=bottom, top=top)
+                grad_bias -= lin_deriv_l2(bias, alpha=alpha, bottom=bottom, top=top, size=size)
+                grad_bias -= lin_deriv_l1(bias, beta=beta, bottom=bottom, top=top, size=size)
 
             return grad_input, grad_weight, grad_bias, None, None
     return _QuantLinDense
@@ -209,14 +214,14 @@ def QuantLogDense(gamma=2, init=0.25, size=5):
     class _QuantLogDense(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias, alpha, beta):
-            alpha.to(device)
-            beta.to(device)
+            alpha.to(weight.device)
+            beta.to(weight.device)
             ctx.save_for_backward(input, weight, bias, alpha, beta)
             return torch.nn.functional.linear(input, weight, bias)
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, bias, alpha, beta = ctx.saved_variables
+            input, weight, bias, alpha, beta = ctx.saved_tensors
             grad_input = grad_weight = grad_bias = None
 
             if ctx.needs_input_grad[0]:
@@ -224,13 +229,13 @@ def QuantLogDense(gamma=2, init=0.25, size=5):
 
             if ctx.needs_input_grad[1]:
                 grad_weight = grad_output.t().mm(input)
-                grad_weight -= exp_deriv_l2(weight, alpha=alpha, gamma=2, init=0.25, size=5)
-                grad_weight -= exp_deriv_l1(weight, beta=beta, gamma=2, init=0.25, size=5)
+                grad_weight -= exp_deriv_l2(weight, alpha=alpha, gamma=2, init=0.25, size=size)
+                grad_weight -= exp_deriv_l1(weight, beta=beta, gamma=2, init=0.25, size=size)
 
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0)
-                grad_bias -= exp_deriv_l2(bias, alpha=alpha, gamma=2, init=0.25, size=5)
-                grad_bias -= exp_deriv_l1(bias, beta=beta, gamma=2, init=0.25, size=5)
+                grad_bias -= exp_deriv_l2(bias, alpha=alpha, gamma=2, init=0.25, size=size)
+                grad_bias -= exp_deriv_l1(bias, beta=beta, gamma=2, init=0.25, size=size)
 
             return grad_input, grad_weight, grad_bias, None, None
     return _QuantLogDense
@@ -254,7 +259,7 @@ def QuantConv2d(size=5, bottom=-1, top=1, stride=1, padding=1, dilation=1, group
 
         @staticmethod
         def backward(ctx, grad_output):
-            input, weight, bias, alpha, beta = ctx.saved_variables
+            input, weight, bias, alpha, beta = ctx.saved_tensors
 
             grad_input = grad_weight = grad_bias = None
 
