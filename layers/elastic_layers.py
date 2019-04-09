@@ -10,19 +10,20 @@ from functions import elastic_quant_connect
 
 class LinearQuantLin(torch.nn.Module, QLayer):
     @staticmethod
-    def convert(other, bottom=-1, top=1, size=5, alpha=1, beta=1):
+    def convert(other, bottom=-1, top=1, size=5, alpha=0, beta=0):
         if not isinstance(other, torch.nn.Linear):
             raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
         return LinearQuantLin(other.in_features, other.out_features, False if other.bias is None else True, bottom=bottom, top=top, size=size, alpha=alpha, beta=beta)
 
-    def __init__(self, in_features, out_features, bias=True, bottom=-1, top=1, size=5, alpha=1, beta=1):
+    def __init__(self, in_features, out_features, bias=True, bottom=-1, top=1, size=5, alpha=0, beta=0):
         torch.nn.Module.__init__(self)
         self.in_features = in_features
         self.out_features = out_features
         self.bottom = bottom
         self.top = top
-        self.register_buffer("alpha", torch.Tensor([alpha]).to(device))
-        self.register_buffer("beta", torch.Tensor([alpha]).to(device))
+        self.size = size
+        self.register_buffer("alpha", torch.Tensor([alpha]))
+        self.register_buffer("beta", torch.Tensor([beta]))
 
         self.weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         if bias:
@@ -43,10 +44,10 @@ class LinearQuantLin(torch.nn.Module, QLayer):
             self.bias.data.clamp_(self.bottom, self.top) 
 
     def set_alpha(self, alpha):
-        self.alpha = torch.Tensor([alpha]).to(device)
+        self.alpha = torch.Tensor([alpha]).to(self.weight.device)
 
     def set_beta(self, beta):
-        self.beta = torch.Tensor([beta]).to(device)
+        self.beta = torch.Tensor([beta]).to(self.weight.device)
 
     def train(self, mode=True):
         if self.training==mode:
@@ -65,20 +66,20 @@ class LinearQuantLin(torch.nn.Module, QLayer):
 
 class LinearQuantLog(torch.nn.Module, QLayer):
     @staticmethod
-    def convert(other, gamma=2, init=0.25, size=5, alpha=1, beta=1):
+    def convert(other, gamma=2, init=0.25, size=5, alpha=0, beta=0):
         if not isinstance(other, torch.nn.Linear):
             raise TypeError("Expected a torch.nn.Linear ! Receive:  {}".format(other.__class__))
         return LinearQuantLog(other.in_features, other.out_features, False if other.bias is None else True, gamma=gamma, init=init, size=size, alpha=alpha, beta=beta)
 
-    def __init__(self, in_features, out_features, bias=True, gamma=2, init=0.25, size=5, alpha=1, beta=1):
+    def __init__(self, in_features, out_features, bias=True, gamma=2, init=0.25, size=5, alpha=0, beta=0):
         super(LinearQuantLog, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.gamma = gamma
         self.init = init
         self.size = size
-        self.register_buffer("alpha", torch.Tensor([alpha]).to(device))
-        self.register_buffer("beta", torch.Tensor([beta]).to(device))
+        self.register_buffer("alpha", torch.Tensor([alpha]))
+        self.register_buffer("beta", torch.Tensor([beta]))
 
         self.weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         if bias:
@@ -110,10 +111,10 @@ class LinearQuantLog(torch.nn.Module, QLayer):
             self.bias.data.clamp_(-self.init*self.gamma**(self.size-1), self.init*self.gamma**(self.size-1))
 
     def set_alpha(self, alpha):
-        self.alpha = torch.Tensor([alpha]).to(device)
+        self.alpha = torch.Tensor([alpha]).to(self.weight.device)
 
     def set_beta(self, beta):
-        self.beta = torch.Tensor([beta]).to(device)
+        self.beta = torch.Tensor([beta]).to(self.weight.device)
 
 
     def forward(self, input):
@@ -123,20 +124,20 @@ class LinearQuantLog(torch.nn.Module, QLayer):
 class QuantConv2dLin(torch.nn.Conv2d, QLayer):
 
     @staticmethod
-    def convert(other, bottom=-1, top=1, size=5, alpha=1, beta=1):
+    def convert(other, bottom=-1, top=1, size=5, alpha=0, beta=0):
         if not isinstance(other, torch.nn.Conv2d):
             raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
         return QuantConv2dLin(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
                          padding=other.padding, dilation=other.dilation, groups=other.groups,
                          bias=False if other.bias is None else True, bottom=bottom, top=top, size=size, alpha=alpha, beta=beta)
 
-    def __init__(self, in_channels, out_channels, kernel_size,  bottom=-1, top=1, size=5, alpha=1, beta=1,  stride=1, padding=1, dilation=1, groups=1, bias=True):
+    def __init__(self, in_channels, out_channels, kernel_size,  bottom=-1, top=1, size=5, alpha=0, beta=0,  stride=1, padding=1, dilation=1, groups=1, bias=True):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,  stride=stride, padding=padding, dilation=dilation, groups=groups, bias=bias)
         self.top = top
         self.bottom = bottom
         self.size = size
-        self.register_buffer("alpha", torch.Tensor([alpha]).to(device))
-        self.register_buffer("beta", torch.Tensor([beta]).to(device))
+        self.register_buffer("alpha", torch.Tensor([alpha]))
+        self.register_buffer("beta", torch.Tensor([beta]))
 
         self.weight_op = elastic_quant_connect.QuantWeightLin(self.top, self.bottom, self.size)
 
@@ -164,10 +165,10 @@ class QuantConv2dLin(torch.nn.Conv2d, QLayer):
             self.bias.data.clamp_(self.bottom, self.top) 
 
     def set_alpha(self, alpha):
-        self.alpha = torch.Tensor([alpha]).to(device)
+        self.alpha = torch.Tensor([alpha]).to(self.weight.device)
 
     def set_alpha(self, beta):
-        self.alpha = torch.Tensor([beta]).to(device)
+        self.alpha = torch.Tensor([beta]).to(self.weight.device)
 
     def forward(self, input):
         out = torch.nn.functional.conv2d(input, self.weight_op.apply(self.weight, self.alpha, self.beta), self.bias, self.stride, self.padding, self.dilation, self.groups)
@@ -176,20 +177,20 @@ class QuantConv2dLin(torch.nn.Conv2d, QLayer):
 class QuantConv2dLog(torch.nn.Conv2d, QLayer):
 
     @staticmethod
-    def convert(other, gamma=2, init=0.25, size=5, alpha=1, beta=1):
+    def convert(other, gamma=2, init=0.25, size=5, alpha=0, beta=0):
         if not isinstance(other, torch.nn.Conv2d):
             raise TypeError("Expected a torch.nn.Conv2d ! Receive:  {}".format(other.__class__))
         return QuantConv2dLog(other.in_channels, other.out_channels, other.kernel_size, stride=other.stride,
                          padding=other.padding, dilation=other.dilation, groups=other.groups,
                          bias=False if other.bias is None else True,  gamma=gamma, init=init, size=size, alpha=alpha, beta=beta)
 
-    def __init__(self, in_channels, out_channels, kernel_size,  gamma=2, init=0.25, size=5, alpha=1, beta=1,  stride=1, padding=1, dilation=1, groups=1):
+    def __init__(self, in_channels, out_channels, kernel_size,  gamma=2, init=0.25, size=5, alpha=0, beta=0,  stride=1, padding=1, dilation=1, groups=1):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size,  stride=stride, padding=padding, dilation=dilation, groups=groups)
         self.gamma = gamma
         self.init = init
         self.size = size
-        self.register_buffer("alpha", torch.Tensor([alpha]).to(device))
-        self.register_buffer("beta", torch.Tensor([beta]).to(device))
+        self.register_buffer("alpha", torch.Tensor([alpha]))
+        self.register_buffer("beta", torch.Tensor([beta]))
 
         self.weight_op = elastic_quant_connect.QuantWeightLog(gamma=self.gamma, init=self.init, size=self.size)
 
@@ -217,10 +218,10 @@ class QuantConv2dLog(torch.nn.Conv2d, QLayer):
             self.bias.data.clamp_(self.bottom, self.top) 
 
     def set_alpha(self, alpha):
-        self.alpha = torch.Tensor([alpha]).to(device)
+        self.alpha = torch.Tensor([alpha]).to(self.weight.device)
 
     def set_beta(self, beta):
-        self.alpha = torch.Tensor([beta]).to(device)
+        self.alpha = torch.Tensor([beta]).to(self.weight.device)
 
     def forward(self, input):
         out = torch.nn.functional.conv2d(input, self.weight_op.apply(self.weight, self.alpha, self.beta), self.bias, self.stride, self.padding, self.dilation, self.groups)
