@@ -30,7 +30,11 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
 	# Instance optimizer and loss
     init_conf = static_opti_conf if not static_opti_conf is None else scheduled_opti_conf.get(0,dict())
     init_conf = deepcopy(init_conf)
-    for element in _EXTERN_PARAM: init_conf.pop(element) # remove patience term
+    for element in _EXTERN_PARAM:
+        try:
+            init_conf.pop(element) # remove patience term
+        except KeyError:
+            pass
     optimizer = opti(model.parameters(),**init_conf)
     loss = loss.to(device)
 
@@ -92,8 +96,9 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
                 after_update()
 
         # Eval part
+        if "after_epoch" in list(model.__class__.__dict__.keys()):
+            model.after_epoch(epoch=curr_epoch) 
         model.eval()   
-        lol  =0
         with torch.no_grad():
             curr_batch = 0
             for x,y in valid_data:
@@ -111,9 +116,14 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
 
                 # accuracy if needed
                 if not accuracy_method is None:
-                    batch_accuracy = accuracy_method(outputs, y)/valid_data.batch_size
+                    batch_accuracy = accuracy_method(outputs, y)
                     mean_valid_accuracy =( (curr_batch-1)*mean_valid_accuracy*valid_data.batch_size + valid_data.batch_size*batch_accuracy  ) /  (curr_batch*valid_data.batch_size)
+        
 
+        #print("train acc : ", mean_train_accuracy)
+        #print("train loss: ", mean_train_loss)
+        #print("train acc : ", mean_valid_accuracy)
+        #print("train loss: ", mean_valid_loss)
         if early_stopping:
             if  not accuracy_method is None: 
                 early_control(model,accuracy=mean_valid_accuracy ) 
@@ -128,7 +138,7 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
             #TODO Reload best model
             pass
 
-    return model
+    return mean_valid_accuracy
 
 
 from models.sample import BinMNIST

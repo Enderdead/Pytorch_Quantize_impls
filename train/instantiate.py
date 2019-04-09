@@ -72,12 +72,12 @@ def instantiate_model(model, trial=None, constants=None, vars=None):
     if vars_dim!=constant_dim:
         raise RuntimeError("Static parameters and dynamics parameter have differents dim. Expected {} (static) equals to {} (dynamic)".format(constant_dim, vars_dim))
 
-    if not trial is None and vars_dim!=1:
-        warn("Optuna don't suport mutli distribution, only the first will be use !",RuntimeWarning)
-        selected_constant= selected_constant[0]
-        selected_vars = selected_vars[0]
-        vars_dim = 1
-        constant_dim = 1
+    #if not trial is None and vars_dim!=1:
+    #    warn("Optuna don't suport mutli distribution, only the first will be use !",RuntimeWarning)
+    #    selected_constant= selected_constant[0]
+    #    selected_vars = selected_vars[0]
+    #    vars_dim = 1
+    #    constant_dim = 1
 
     if (vars_dim!=1):
         if len(selected_constant)!=len(selected_vars):
@@ -109,6 +109,30 @@ def instantiate_model(model, trial=None, constants=None, vars=None):
         return model(**{**final_constant, **final_vars_kwargs})
 
 
+def get_opti_from_model(model, trial):
+    data_dict = {}
+    opti_dict = {}
+
+    if not model.__dict__.get('opti_params', None) is None:
+        if not model.opti_params.get("data", None) is None:
+            for key, value in model.opti_params["data"].items():
+                data_dict[key] = value
+
+        if not model.opti_params.get("optim", None) is None:
+            for key, value in model.opti_params["optim"].items():
+                opti_dict[key] = value        
+
+    if not model.__dict__.get("var_opti_params", None) is None:
+
+        if not model.var_opti_params.get("data", None) is None:
+            for parameter in model.var_opti_params["data"]:
+                data_dict[parameter.name] = parameter.apply(trial=trial)
+            
+        if not model.var_opti_params.get("optim", None) is None:
+            for parameter in model.var_opti_params["optim"]:
+                opti_dict[parameter.name] = parameter.apply(trial=trial)
+
+    return data_dict, opti_dict
 
 
 if __name__ == "__main__":
