@@ -15,7 +15,7 @@ from layers.xnor_layers import XNORConv2d, LinearXNOR
 from layers import log_lin_layers
 
 # Import lass reg quant 
-from layers import lossQuant_layers
+from layers import elastic_layers
 
 
 def _convert_net(module, dict_replace):
@@ -65,12 +65,12 @@ def log_lin_net_convert(net, fsr=7, bitwight=3, dtype="lin"):
 
 def loss_quant_log_convert(net, gamma=2, init=0.25, size=5, alpha=1):
     kwargs = {"gamma": gamma, "init": init, "size": size, "alpha": alpha}
-    dict_patch = {nn.Linear : (lossQuant_layers.LinearQuantLog, kwargs),
-                  nn.Conv2d : (lossQuant_layers.QuantConv2dLog, kwargs)}
+    dict_patch = {nn.Linear : (elastic_layers.LinearQuantLog, kwargs),
+                  nn.Conv2d : (elastic_layers.QuantConv2dLog, kwargs)}
     return _convert_net(deepcopy(net), dict_patch) 
 
 def loss_quant_lin_convert(net, bottom=-1, top=1, size=5, alpha=1):
     kwargs = {"bottom": bottom, "top": top, "size": size, "alpha": alpha}
-    dict_patch = {nn.Linear : (lossQuant_layers.LinearQuantLin, kwargs),
-                  nn.Conv2d : (lossQuant_layers.QuantConv2dLin, kwargs)}
+    dict_patch = {nn.Linear : (elastic_layers.LinearQuantLin, kwargs),
+                  nn.Conv2d : (elastic_layers.QuantConv2dLin, kwargs)}
     return _convert_net(deepcopy(net), dict_patch) 
