@@ -162,8 +162,8 @@ def QuantWeightExp(gamma=2, init=0.25, size=5):
         def backward(ctx, output_grad):
             weight, alpha, beta = ctx.saved_tensors
             input_grad  = output_grad.clone()
-            input_grad -= lin_deriv_l2(weight, alpha, gamma, init, size)
-            input_grad -= lin_deriv_l1(weight, beta, gamma, init, size)
+            input_grad -= exp_deriv_l2(weight, alpha, gamma, init, size)
+            input_grad -= exp_deriv_l1(weight, beta, gamma, init, size)
 
             return input_grad, None
     return _QuantWeightOp
