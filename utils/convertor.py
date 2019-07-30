@@ -69,8 +69,8 @@ def loss_quant_log_convert(net, gamma=2, init=0.25, size=5, alpha=1):
                   nn.Conv2d : (elastic_layers.QuantConv2dLog, kwargs)}
     return _convert_net(deepcopy(net), dict_patch) 
 
-def loss_quant_lin_convert(net, bottom=-1, top=1, size=5, alpha=1):
-    kwargs = {"bottom": bottom, "top": top, "size": size, "alpha": alpha}
+def loss_quant_lin_convert(net, bottom=-1, top=1, size=5, alpha=0, beta=0):
+    kwargs = {"bottom": bottom, "top": top, "size": size, "alpha": alpha, "beta":beta}
     dict_patch = {nn.Linear : (elastic_layers.LinearQuantLin, kwargs),
                   nn.Conv2d : (elastic_layers.QuantConv2dLin, kwargs)}
     return _convert_net(deepcopy(net), dict_patch) 
