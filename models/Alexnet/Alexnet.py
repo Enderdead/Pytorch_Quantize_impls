@@ -14,40 +14,32 @@ class LinearQuant(torch.nn.Linear):
 FSR = 7
 BITWIGHT = 4
 class AlexNet(nn.Module):
-
     def __init__(self, num_classes=100):
         super(AlexNet, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR+3,bitwight=BITWIGHT),
             nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(64, 192, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR+3,bitwight=BITWIGHT),
             nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(192, 384, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR+4,bitwight=BITWIGHT),
             nn.Conv2d(384, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR+3,bitwight=BITWIGHT),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR+3,bitwight=BITWIGHT),
             nn.MaxPool2d(kernel_size=2),
         )
         self.classifier = nn.Sequential(
             nn.Dropout(),
             LinearQuant(256 * 2 * 2, 4096),
             nn.ReLU(inplace=True),
-            LogQuant(fsr=FSR+1,bitwight=BITWIGHT, lin_back=True),
             nn.Dropout(),
             LinearQuant(4096, 4096),
             nn.ReLU(inplace=True),
-            #LogQuant(fsr=FSR,bitwight=BITWIGHT),
             nn.Linear(4096, num_classes),
-            #nn.Softmax(),
+            nn.LogSoftmax(dim=1),
         )
 
     def forward(self, x):
