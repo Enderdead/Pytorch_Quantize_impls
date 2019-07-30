@@ -1,7 +1,20 @@
+# Doc gen
+doc
+
+
+#TODO remove theses directories !
+demos/
+test/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+#Visual studio code files
+.vscode
+
+# Idea files
+.idea
 
 # C extensions
 *.so
