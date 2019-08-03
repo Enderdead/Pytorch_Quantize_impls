@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-from layers.lossQuant_layers import LinearQuantLog, LinearQuantLin
+from layers.elastic_layers import LinearQuantLog, LinearQuantLin
 from device import device
 
 class QuantLossMNISTLin(torch.nn.Module):
@@ -21,7 +21,7 @@ class QuantLossMNISTLin(torch.nn.Module):
         self.norm4   =nn.BatchNorm1d(out_features, eps=1e-4, momentum=0.15)
         
         self.activation     = nn.ReLU()
-        self.act_end = nn.LogSoftmax()
+        self.act_end = nn.LogSoftmax(dim=1)
 
     def reset(self):
         self.linear1.reset_parameters()

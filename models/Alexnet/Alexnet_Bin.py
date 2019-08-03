@@ -10,29 +10,29 @@ class AlexNetBin(nn.Module):
         coef = 3
 
         self.features = nn.Sequential(
-                BinarizeConv2d(3, 64*coef, kernel_size=11, stride=4, padding=2),
+                BinConv2d(3, 64*coef, kernel_size=11, stride=4, padding=2),
                 nn.MaxPool2d(kernel_size=3, stride=2),
                 torch.nn.BatchNorm2d(64*coef),
                 nn.Hardtanh(inplace=True),
                 BinaryConnect(stochastic=False),
 
-                BinarizeConv2d(64*coef, 192*coef, kernel_size=5, padding=2),
+                BinConv2d(64*coef, 192*coef, kernel_size=5, padding=2),
                 nn.MaxPool2d(kernel_size=3, stride=2),
                 torch.nn.BatchNorm2d(192*coef),
                 nn.Hardtanh(inplace=True),
 
                 BinaryConnect(stochastic=False),
-                BinarizeConv2d(192*coef, 384*coef, kernel_size=3, padding=1),
+                BinConv2d(192*coef, 384*coef, kernel_size=3, padding=1),
                 torch.nn.BatchNorm2d(384*coef),
                 nn.Hardtanh(inplace=True),
 
                 BinaryConnect(stochastic=False),
-                BinarizeConv2d(384*coef, 256*coef, kernel_size=3, padding=1),
+                BinConv2d(384*coef, 256*coef, kernel_size=3, padding=1),
                 torch.nn.BatchNorm2d(256*coef),
                 nn.Hardtanh(inplace=True),
 
                 BinaryConnect(stochastic=False),
-                BinarizeConv2d(256*coef, 256, kernel_size=3, padding=1),
+                BinConv2d(256*coef, 256, kernel_size=3, padding=1),
                 nn.MaxPool2d(kernel_size=3, stride=2),
                 torch.nn.BatchNorm2d(256),
                 nn.Hardtanh(inplace=True),
@@ -55,10 +55,10 @@ class AlexNetBin(nn.Module):
 
     def clip(self):
         for layer in self.features.modules():
-            if isinstance(layer, (BinarizeConv2d, LinearBin)):
+            if isinstance(layer, (BinConv2d, LinearBin)):
                 layer.clamp()
         for layer in self.classifieur.modules():
-            if isinstance(layer, (BinarizeConv2d, LinearBin)):
+            if isinstance(layer, (BinConv2d, LinearBin)):
                 layer.clamp()
 
     def forward(self, x):
