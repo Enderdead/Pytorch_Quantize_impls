@@ -9,16 +9,16 @@ class BasicBlock(nn.Module):
 
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
-        self.conv1 = Conv2dBin(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = BinConv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.binarisation = BinaryConnect(stochastic=True)
-        self.conv2 = Conv2dBin(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = BinConv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
-                Conv2dBin(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                BinConv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(self.expansion*planes),
                 nn.Hardtanh(),
                 BinaryConnect(stochastic=True)

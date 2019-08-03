@@ -165,7 +165,7 @@ def QuantWeightExp(gamma=2, init=0.25, size=5):
             input_grad -= exp_deriv_l2(weight, alpha, gamma, init, size)
             input_grad -= exp_deriv_l1(weight, beta, gamma, init, size)
 
-            return input_grad, None
+            return input_grad, None, None
     return _QuantWeightOp
 
 def QuantLinDense(size=5, bottom=-1, top=1):
@@ -229,13 +229,13 @@ def QuantLogDense(gamma=2, init=0.25, size=5):
 
             if ctx.needs_input_grad[1]:
                 grad_weight = grad_output.t().mm(input)
-                grad_weight -= exp_deriv_l2(weight, alpha=alpha, gamma=2, init=0.25, size=size)
-                grad_weight -= exp_deriv_l1(weight, beta=beta, gamma=2, init=0.25, size=size)
+                grad_weight -= exp_deriv_l2(weight, alpha=alpha, gamma=gamma, init=init, size=size)
+                grad_weight -= exp_deriv_l1(weight, beta=beta, gamma=gamma, init=init, size=size)
 
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0)
-                grad_bias -= exp_deriv_l2(bias, alpha=alpha, gamma=2, init=0.25, size=size)
-                grad_bias -= exp_deriv_l1(bias, beta=beta, gamma=2, init=0.25, size=size)
+                grad_bias -= exp_deriv_l2(bias, alpha=alpha, gamma=gamma, init=init, size=size)
+                grad_bias -= exp_deriv_l1(bias, beta=beta, gamma=gamma, init=init, size=size)
 
             return grad_input, grad_weight, grad_bias, None, None
     return _QuantLogDense

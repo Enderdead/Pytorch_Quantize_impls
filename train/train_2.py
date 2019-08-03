@@ -22,6 +22,8 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
     if static_opti_conf is None and scheduled_opti_conf is None:
         raise RuntimeError("No opti conf given !")
 
+    history_acc_train = list()
+    history_acc_valid = list()
     # Move model to good device
     model = model.to(device)
 
@@ -101,7 +103,7 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
         
         if not after_epoch is None:
             after_epoch(epoch=curr_epoch, model=model) 
-        model.eval()   
+        #model.eval()   
         with torch.no_grad():
             curr_batch = 0
             for x,y in valid_data:
@@ -126,6 +128,8 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
         print("train acc : ", mean_train_accuracy)
         print("train loss: ", mean_train_loss)
         print("valid acc : ", mean_valid_accuracy)
+        history_acc_train.append(mean_train_accuracy)
+        history_acc_valid.append(mean_valid_accuracy)
         #print("train loss: ", mean_valid_loss)
         if early_stopping:
             if  not accuracy_method is None: 
@@ -140,7 +144,7 @@ def train(model, train_data, valid_data, device="cpu", save_path=None, early_sto
         if early_control.early_stop:
             mean_valid_accuracy = early_control.best_score#TODO Reload best model
     print("final acc : ",best_acc)
-    return best_acc
+    return history_acc_train, history_acc_valid
 
 
 from models.sample import BinMNIST

@@ -20,7 +20,7 @@ BATCH_SIZE = 200
 LEARNING_RATE = 0.001
 BOTTOM = -1
 TOP = 1
-ALPHA = [0.0, 0.0, 0.0001, 0.0001, 0.0002, 0.0002, 2]
+ALPHA = [0.0, 0.0, 0.01, 0.01, 0.5, 0.5, 1]
 SIZE = 5
 EPOCH = 7
 DATASET_SIZE = 60000
@@ -60,6 +60,8 @@ loss = torch.nn.CrossEntropyLoss().to(device)
 
 
 for epoch in range(EPOCH):
+    optimizer.zero_grad()
+    model.train()
     mean_loss = 0.0
     print(" Set alpha to -> ",ALPHA[epoch] )
     bar = ChargingBar('Learning', max=1+(DATASET_SIZE//BATCH_SIZE))
@@ -89,7 +91,10 @@ for epoch in range(EPOCH):
         optimizer.step()
         model.clamp()
     print("\nEpoch {}, mean_loss : {}, ".format(epoch, mean_loss/DATASET_SIZE))
-    
+    print(model.linear1.weight)
+    model.eval()
+    print(model.linear1.weight)
+
     accucacy = 0.0
     for X, Y in valid_set:
 
