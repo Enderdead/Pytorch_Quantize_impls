@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.binary_layers import *
-from functions.binary_connect import *
+from ..layers.binary_layers import *
+from ..functions.binary_connect import *
 
 class BasicBlock(nn.Module):
     expansion = 1
