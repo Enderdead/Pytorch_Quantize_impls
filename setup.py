@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 import QuantTorch
  
 setup(
-    name='Potencial_Avoidance',
+    name='Quant_Torch',
     version=QuantTorch.__version__,
     packages=find_packages(),
     author="François 'Enderdead' Gauthier-Clerc",
@@ -16,7 +16,7 @@ setup(
     author_email="francois@gauthier-clerc.fr",
  
     # Une description courte
-    description="A little lib to compute potential avoidance algorithm.",
+    description="A set of quantization implementations on pytorch.",
  
     # Une description longue, sera affichée pour présenter la lib
     # Généralement on dump le README ici
@@ -27,7 +27,7 @@ setup(
     include_package_data=True,
  
     # Une url qui pointe vers la page officielle de votre lib
-    url='https://github.com/Enderdead/potential_avoidance',
+    url='https://github.com/Enderdead/Pytorch_Quantize_impls',
  
     # Il n'y a pas vraiment de règle pour le contenu. Chacun fait un peu
     # comme il le sent. Il y en a qui ne mettent rien.
@@ -36,7 +36,7 @@ setup(
         "Development Status :: 1 - Planning",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3.7",
-        "Topic :: Robotics avoidance",
+        "Topic :: Neuronal network quantization",
     ],
     license="MIT",
 )
