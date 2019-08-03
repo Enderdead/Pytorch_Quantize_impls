@@ -116,6 +116,7 @@ class BinaryDense(torch.autograd.Function):
 def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
     """
     .. warning:: **DEPRECATED**
+    
     Return a Conv2d Op with parameters given.
     Apply a Deterministic binarization on weight only.
     """
@@ -152,7 +153,6 @@ def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
     return _BinaryConv2d
 
 
-# AP2 = sign(x) × 2round(log2jxj)
 
 def AP2(x):
     """
