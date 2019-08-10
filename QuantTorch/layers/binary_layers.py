@@ -77,7 +77,7 @@ class BinConv2d(torch.nn.Conv2d, QLayer):
         torch.nn.Conv2d.__init__(self, in_channels, out_channels, kernel_size, stride=stride,
                  padding=padding, dilation=dilation, groups=groups, bias=bias)
 
-        
+        self.bin_op = binary_connect.BinaryConnectDeterministic if deterministic else binary_connect.BinaryConnectStochastic
         self.deterministic = deterministic
 
     def clamp(self):
@@ -98,9 +98,11 @@ class BinConv2d(torch.nn.Conv2d, QLayer):
             self.weight.data.copy_(self.bin_op.apply(self.weight).detach())
 
     def forward(self, input):
-        if self.deterministic:
-            return torch.nn.functional.conv2d(input, binary_connect.BinaryConnectDeterministic.apply(self.weight), self.bias, self.stride, self.padding, self.dilation, self.groups)
-        return torch.nn.functional.conv2d(input, binary_connect.BinaryConnectStochastic.apply(self.weight), self.bias, self.stride, self.padding, self.dilation, self.groups)
+        if self.training:
+            return torch.nn.functional.conv2d(input, self.bin_op.apply(self.weight), self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return torch.nn.functional.conv2d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+
+
 
 class ShiftNormBatch1d(torch.nn.Module):
     __constants__ = ['momentum', 'eps']
