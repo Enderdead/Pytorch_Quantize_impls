@@ -1,0 +1,6 @@
+[submodule "tests/implementations/BinaryNet/BinaryNet.pytorch"]
+	path = tests/implementations/BinaryNet/BinaryNet.pytorch
+	url = https://github.com/Enderdead/BinaryNet.pytorch
+[submodule "tests/implementations/Dorefa/tensorpack"]
+	path = tests/implementations/Dorefa/tensorpack
+	url = git@github.com:tensorpack/tensorpack.git
