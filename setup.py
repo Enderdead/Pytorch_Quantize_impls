@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 import QuantTorch
  
 setup(
-    name='Quant_Torch',
+    name='QuantTorch',
     version=QuantTorch.__version__,
     packages=find_packages(),
     author="François 'Enderdead' Gauthier-Clerc",

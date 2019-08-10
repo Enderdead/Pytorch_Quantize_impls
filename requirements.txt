@@ -4,3 +4,4 @@ numpy
 scipy
 optuna
 pycm;python_version>="3.5"
+torchbearer
