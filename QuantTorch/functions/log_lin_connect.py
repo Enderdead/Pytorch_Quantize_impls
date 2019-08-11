@@ -40,7 +40,7 @@ def LogQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
     return _LogQuant
 
 def LinQuant(fsr=7, bitwight=3, with_sign=True, lin_back=True):
-    """
+    r"""
     Generate a Quantization op using Lin method from Imp. CNN using Log Data Rep.
 
     :param fsr: Max value of the output.

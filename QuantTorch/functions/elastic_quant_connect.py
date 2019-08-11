@@ -34,7 +34,7 @@ def exp_proj(x, gamma=2, init=0.25, size=5):
     return _proj_val(x, exp_set)
 
 def lin_deriv_l2(x, alpha, top=1,  bottom=-1, size=5):
-    """
+    r"""
     Apply a Sawtooth function on x with alpha as coefficient. This function is null on size specific values.
     There's values start from bottom and finish at top, and they have a  unifom  step between each other.
 
