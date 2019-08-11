@@ -20,6 +20,7 @@ class LinearXNOR(torch.nn.Linear, QLayer):
     def train(self, mode=True):
         if self.training==mode:
             return
+        self.training=mode
         if mode:
             self.weight.data.copy_(self.weight.org.data)
         else: # Eval mod
@@ -50,6 +51,7 @@ class XNORConv2d(torch.nn.Conv2d, QLayer):
     def train(self, mode=True):
         if self.training==mode:
             return
+        self.training=mode
         if mode:
             self.weight.data.copy_(self.weight.org.data)
         else: # Eval mod
