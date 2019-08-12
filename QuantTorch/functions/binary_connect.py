@@ -35,7 +35,7 @@ class BinaryConnectDeterministic(torch.autograd.Function):
         input, = ctx.saved_tensors
         grad_input = grad_output.clone()
         grad_input[torch.abs(input) > 1.001] = 0
-        return grad_output
+        return grad_input
 
 
 
