@@ -1,5 +1,5 @@
 import torch
-from .common import front
+from .common import front, safeSign
 import warnings
 warnings.simplefilter("always",DeprecationWarning)
 """
@@ -8,7 +8,7 @@ https://arxiv.org/pdf/1606.06160.pdf
 """
 
 
-def _quantize(x, bits=3):
+def _quantize(x, bit_width=3):
     """
     Quantize operator used in all quantization of Dorefa net.
 
@@ -16,16 +16,16 @@ def _quantize(x, bits=3):
     with x in [0,1]  and quantize(x) in [0,1]
     and with k = bits
     """
-    if bits==1:
-        return torch.sign(x)
-    elif bits==32:
+    if bit_width==1:
+        return safeSign(x)
+    elif bit_width==32:
         return x
     else:
         two = torch.ones_like(x)*2
-        return ((1)/(torch.pow(two,bits)-1))*torch.round((torch.pow(two,bits)-1)*x)
+        return ((1)/(torch.pow(two,bit_width)-1))*torch.round((torch.pow(two,bit_width)-1)*x)
 
 
-def nnDorefaQuant(bitwight=3, with_sign=False):
+def nnDorefaQuant(bit_width=3):
     """
     Return a Torch.nn.Module fronter with a Quant operator inside.\n
     :param bitwight: Number of bits to use for quantization op.
@@ -38,35 +38,48 @@ def nnDorefaQuant(bitwight=3, with_sign=False):
     class _Quant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            if with_sign:
-                return torch.sign(input)*_quantize(input, bits=bitwight)
-            else:
-                return torch.sign(input)*_quantize(input, bits=bitwight)
+            return _quantize(input, bit_width=bit_width)
+
         def backward(ctx, grad_ouput):
             return grad_ouput.clone()
     return front(_Quant)
    
 
 
-def DorefaQuant(x, bitwight=3, with_sign=False):
+def DorefaQuant(x, bit_width=3):
     """
     Apply a quantize op on x.
-    :param bitwight: Number of bits to use for quantization op.
+    :param bit_width: Number of bits to use for quantization op.
     :param with_sign: Add a sign bit or not.
     """
     class _Quant(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input):
-            if with_sign:
-                return torch.sign(input)*_quantize(input.clamp(0,1), bits=bitwight)
-            else:
-                return _quantize(input.clamp(0,1), bits=bitwight)
+            return _quantize(input, bit_width=bit_width)
+
+        @staticmethod
         def backward(ctx, grad_ouput):
             return grad_ouput.clone()
     return _Quant.apply(x)
 
 
-def nnQuantWeight(bitwight=3):
+class _ignore_factor_op(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, input, const):
+            return input*const
+
+        @staticmethod
+        def backward(ctx, grad_ouput):
+            var_grad = None
+            const_grad = None
+            if ctx.needs_input_grad[0]:
+                var_grad = grad_ouput.clone()
+            if ctx.needs_input_grad[1]:
+                const_grad = 0
+            return var_grad, const_grad
+
+
+def nnQuantWeight(bit_width=3):
     r"""
     Return a Module fronter with quantize op for layer's weight.
     This Op include take any real weight range.
@@ -80,41 +93,47 @@ def nnQuantWeight(bitwight=3):
     class _QuantWeight(torch.nn.Module):
         def __init__(self):
             super(_QuantWeight, self).__init__()
-            self.bitwight = bitwight
-            self.quant_op =  nnDorefaQuant(bitwight)
+            self.bit_width = bit_width
+            self.quant_op =  nnDorefaQuant(bit_width)
 
         def forward(self, x):
-            if self.bitwight==1:
+            if self.bit_width==1:
                 E = torch.mean(torch.abs(x)).detach()
-                weight_q = self.quant_op(x / E) * E
-            elif self.bitwight==32:
+                weight = _ignore_factor_op.apply(self.quant_op(x) , E )
+            elif self.bit_width==32:
                 return x
             else:
+                if torch.max(torch.abs(x)) ==0.0:
+                    return torch.zeros_like(x)
                 weight = torch.tanh(x)
-                weight = weight / 2 / torch.max(torch.abs(weight)) + 0.5
-                weight_q = 2 * self.quant_op(weight) - 1
-            
-            return weight_q
+                weight = weight / (2 * torch.max(torch.abs(weight)) ) + 0.5
+                weight = 2 * self.quant_op(weight) - 1
+            return weight
+
     return _QuantWeight()
 
 
-def QuantDense(bitwight=3):
+def QuantDense(bit_width=3):
     """ 
+    .. warning:: **DEPRECATED**
     Applies a linear transformation to the incoming data: y=W_b.x+b
     With W_b a quantized transformation of W.
 
-    :param bitwight: Number of bits to use for quantization op (without bit sign)
+    :param bit_width: Number of bits to use for quantization op (without bit sign)
     """
     class _QuantDense(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):
             max_abs = torch.max(torch.abs(torch.tanh(weight)))
-            if bitwight>1:
-                weight_q = 2*_quantize(0.5  + torch.tanh(weight)/(2*max_abs)   , bits=bitwight) - 1
+            if bit_width==1:
+                weight_q = safeSign(weight)* torch.mean(torch.abs(weight)).detach()
+            elif bit_width==32:
+                weight_q = weight
             else:
-                weight_q = torch.sign(weight)* torch.mean(torch.abs(weight)).detach()
-            ctx.save_for_backward(input, weight, weight_q, max_abs, bias)
+                weight_q = 2*_quantize(0.5  + torch.tanh(weight)/(2*max_abs)   , bit_width=bit_width) - 1
+            
             output = torch.nn.functional.linear(input, weight_q, bias)
+            ctx.save_for_backward(input, weight, weight_q, max_abs, bias)
             return output
 
         @staticmethod
@@ -125,7 +144,9 @@ def QuantDense(bitwight=3):
                 grad_input = grad_output.mm(weight_q)
             if ctx.needs_input_grad[1]:
                 grad_weight = grad_output.t().mm(input)
-                if bitwight>1:
+                if bit_width==1 or bit_width==32:
+                    grad_weight = grad_weight
+                else:
                     grad_weight =  grad_weight * (1 - torch.pow(torch.tanh(weight),2)) / max_abs
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0)
@@ -134,21 +155,24 @@ def QuantDense(bitwight=3):
     return _QuantDense
 
 
-def QuantConv2d(stride=1, padding=1, dilation=1, groups=1, bitwight=3):
+def QuantConv2d(stride=1, padding=1, dilation=1, groups=1, bit_width=3):
     """
     .. warning:: **DEPRECATED**
     Return a Conv2d op with settings given.
-    If bitwight=1, return a XNOR like op.
+    If bit_width=1, return a XNOR like op.
     """
     warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
     class _QuantConv2d(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):
             max_weight = torch.max(torch.abs(weight))
-            if bitwight>1:
-                weight_q = 2*_quantize(0.5  + torch.tanh(weight)/(2*torch.tanh(max_weight))   , bits=bitwight) - 1
-            else: # if bitwight == 1, we use a XNOR quant
-                weight_q = torch.sign(weight)* torch.mean(torch.abs(weight)).detach()
+            if bit_width==1:
+                weight_q = safeSign(weight)* torch.mean(torch.abs(weight)).detach()
+            elif bit_width==32:
+                weight_q = weight
+            else:
+                weight_q = 2*_quantize(0.5  + torch.tanh(weight)/(2*torch.tanh(max_weight))   , bit_width=bit_width) - 1
+            
             ctx.save_for_backward(input, weight, weight_q, max_weight, bias)
             output = torch.nn.functional.conv2d(input, weight_q, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
             return output
@@ -162,7 +186,7 @@ def QuantConv2d(stride=1, padding=1, dilation=1, groups=1, bitwight=3):
                 grad_input = torch.nn.grad.conv2d_input(input.size(), weight_q, grad_output, stride=stride, padding=padding, dilation=dilation, groups=groups)
             if ctx.needs_input_grad[1]:
                 grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride=stride, padding=padding, dilation=dilation, groups=groups)
-                if bitwight>1:
+                if bit_width>1 and bit_width<32:
                     grad_weight = grad_weight * (1 - torch.pow(torch.tanh(weight),2)) /  torch.tanh(max_weight) 
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0).sum(1).squeeze(1).sum(-1).squeeze(-1)
