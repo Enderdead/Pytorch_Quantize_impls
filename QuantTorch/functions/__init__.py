@@ -47,3 +47,5 @@ from .WQR_connect import    lin_deriv_WQR,\
                             QuantWeightWExp,\
                             QuantWLinDense,\
                             QuantWLogDense
+
+from .common import safeSign

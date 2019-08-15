@@ -1,6 +1,12 @@
 import torch
 
 
+def safeSign(tensor):
+    result = torch.sign(tensor)
+    result[result==0] = 1
+    return result
+
+
 def front(claaz):
     """
     Return a Module proxy of your claaz. 
