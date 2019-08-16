@@ -1,5 +1,5 @@
 import torch
-from .common import front
+from .common import front, safeSign
 from ..device import device
 import warnings
 warnings.simplefilter("always",DeprecationWarning)
@@ -23,8 +23,8 @@ class TernaryConnectDeterministic(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input):
         ctx.save_for_backward(input)
-        sign = torch.sign(input)
-        return (sign + torch.sign(input -0.5*sign ))/2
+        sign = safeSign(input)
+        return (sign + safeSign(input -0.5*sign ))/2
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -51,10 +51,9 @@ class TernaryConnectStochastic(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input):
         ctx.save_for_backward(input)
-        sign = torch.sign(input)
+        sign = safeSign(input)
         z = torch.rand_like(input, requires_grad=False)
-        #return sign - (z>torch.abs(input)).type(torch.FloatTensor).to(device) 
-        return sign - torch.sign(z-torch.abs(input))
+        return sign - safeSign(input)*(z>torch.abs(input)).type(dtype=input.type())
 
     @staticmethod
     def backward(ctx, grad_output):
