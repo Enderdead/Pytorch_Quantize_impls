@@ -1,8 +1,8 @@
 import torch
-from .common import front
+from .common import front, safeSign
 from ..device import device
-import warnings
-warnings.simplefilter("always",DeprecationWarning)
+import warnings as _warnings
+_warnings.simplefilter("always",DeprecationWarning)
 
 """
 Implementation from Binary connect and Binary net :
@@ -25,7 +25,7 @@ class BinaryConnectDeterministic(torch.autograd.Function):
         Apply stochastic binarization on input tensor.
         """
         ctx.save_for_backward(input)
-        return torch.sign(input)
+        return safeSign(input)
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -91,7 +91,7 @@ class BinaryDense(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bias=None):
         ctx.save_for_backward(input, weight, bias)
-        weight_b = torch.sign(weight)
+        weight_b = safeSign(weight)
         # Apply classic linear op with quantified weight.
         output = torch.nn.functional.linear(input, weight_b, bias)
         return output
@@ -99,7 +99,7 @@ class BinaryDense(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         input, weight, bias = ctx.saved_variables
-        weight_b = torch.sign(weight)
+        weight_b = safeSign(weight)
         grad_input = grad_weight = grad_bias = None
         if ctx.needs_input_grad[0]:
             # grad_input = grad_output*Wb
@@ -120,12 +120,12 @@ def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
     Return a Conv2d Op with parameters given.
     Apply a Deterministic binarization on weight only.
     """
-    warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
+    _warnings.warn("Deprecated conv op ! Huge cuda memory consumption due to torch.grad.cuda_grad.conv2d_input function.", DeprecationWarning,stacklevel=2)
     class _BinaryConv2d(torch.autograd.Function):
         @staticmethod
         def forward(ctx, input, weight, bias=None):
             ctx.save_for_backward(input, weight, bias)
-            weight_b = torch.sign(weight)
+            weight_b = safeSign(weight)
             output = torch.nn.functional.conv2d(input, weight_b, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
             return output
 
@@ -133,7 +133,7 @@ def BinaryConv2d(stride=1, padding=1, dilation=1, groups=1):
         def backward(ctx, grad_output):
             input, weight, bias = ctx.saved_variables
 
-            weight_b = torch.sign(weight)
+            weight_b = safeSign(weight)
 
             grad_input = grad_weight = grad_bias = None
 
@@ -166,7 +166,7 @@ def AP2(x):
 
     """
     two = torch.ones_like(x)*2
-    return torch.sign(x) * torch.pow(two,torch.round(torch.log2(torch.abs(x))))
+    return safeSign(x) * torch.pow(two,torch.round(torch.log2(torch.abs(x))))
 
 
 

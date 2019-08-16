@@ -18,7 +18,7 @@ def test_lin_layer_forward():
     inputs = Variable(torch.Tensor([[2,1,-3],]))
 
     #  check the forward pass 
-    assert torch.all(torch.eq(lin(inputs), torch.mm(torch.Tensor([[2,1,-3],]),torch.Tensor([sign(0.5),0,sign(-0.5)]).view(3,1))))
+    assert torch.all(torch.eq(lin(inputs), torch.mm(torch.Tensor([[2,1,-3],]),torch.Tensor([sign(0.5),sign(0.1),sign(-0.5)]).view(3,1))))
     
     # check with a bias
     lin2 = LinearBin(3,1, bias=True)
@@ -26,7 +26,7 @@ def test_lin_layer_forward():
     lin2.bias.data.copy_(torch.Tensor([3]).view(1))
     inputs = Variable(torch.Tensor([[2,1,-3],]))
 
-    assert torch.all(torch.eq(lin(inputs), torch.mm(torch.Tensor([[2,1,-3],]),3+torch.Tensor([sign(0.5),0,sign(-0.5)]).view(3,1))))
+    assert torch.all(torch.eq(lin(inputs), torch.mm(torch.Tensor([[2,1,-3],]),3+torch.Tensor([sign(0.5),sign(0.1),sign(-0.5)]).view(3,1))))
     
 
 def test_conv_layer_forward():

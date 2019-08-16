@@ -1,9 +1,6 @@
 import torch 
-from torch._jit_internal import weak_module, weak_script_method, List
 from torch.nn.modules.utils import _pair
-import torch.nn.functional as F
-from torch.nn.parameter import Parameter
-from math import sqrt
+from math import sqrt as _sqrt
 from .common import QLayer
 from ..functions import binary_connect
 
@@ -21,7 +18,7 @@ class LinearBin(torch.nn.Linear, QLayer):
         self.bin_op = binary_connect.BinaryConnectDeterministic if deterministic else binary_connect.BinaryConnectStochastic
         
     def reset_parameters(self):
-        self.weight.data.normal_(0, 1 * (sqrt(1. / self.in_features)))
+        self.weight.data.normal_(0, 1 * (_sqrt(1. / self.in_features)))
         if self.bias is not None:
             self.bias.data.zero_()
 

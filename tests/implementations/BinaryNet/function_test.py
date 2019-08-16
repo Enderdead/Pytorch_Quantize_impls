@@ -1,5 +1,6 @@
 from QuantTorch.functions import binary_connect
 from .BinaryNet_pytorch.models import binarized_modules
+from QuantTorch.functions.common import safeSign
 import torch
 from math import copysign
 
@@ -9,10 +10,11 @@ def sign(x):
 
 def test_with_ref_det():
     x_1 = torch.Tensor([1,0.5,-0.33])
-    x_2 = torch.Tensor([[1,0.5,-0.33],[0.,0.1,-0.8]])
+    x_2 = torch.Tensor([[1,0.5,-0.33],[0.1,0.1,-0.8]])
 
     assert torch.all(torch.eq(binarized_modules.Binarize(x_1,quant_mode='det'),
                     binary_connect.BinaryConnectDeterministic.apply(x_1)))
+
 
     assert torch.all(torch.eq(binarized_modules.Binarize(x_2,quant_mode='det'),
                     binary_connect.BinaryConnectDeterministic.apply(x_2)))
@@ -22,8 +24,8 @@ def test_det_apply():
     x_1 = torch.Tensor([1,0.5,-0.33])
     x_2 = torch.Tensor([[4,2,-4],[0.,0.1,-0.8]])
 
-    y_1 = torch.sign(x_1)
-    y_2 = torch.sign(x_2)
+    y_1 = safeSign(x_1)
+    y_2 = safeSign(x_2)
     assert torch.all(torch.eq(y_1,
                     binary_connect.BinaryConnectDeterministic.apply(x_1)))
 
