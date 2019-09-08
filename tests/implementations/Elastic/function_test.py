@@ -41,7 +41,7 @@ def test_lin_deriv_l2(alpha):
     x3 = torch.Tensor([0.2,0.5,0.75])
 
 
-    func = lambda x : lin_deriv_l2(x, alpha, top=1, bottom=0, size=3)
+    func = lambda x : lin_deriv_l2(x, alpha, top=1, bottom=0, size=3) # 0 0.5 1
     
     assert equals(
         func(x1),
@@ -50,12 +50,12 @@ def test_lin_deriv_l2(alpha):
 
     assert equals(
         func(x2),
-        torch.Tensor([-0.1*alpha, -0.1*alpha, 0.1*alpha]),
+        torch.Tensor([0.1*alpha, 0.1*alpha, -0.1*alpha]),
         1e-5
     )
     assert equals(
         func(x3),
-        torch.Tensor([-0.2*alpha,  0., -0.25*alpha]),
+        torch.Tensor([0.2*alpha,  0., 0.25*alpha]),
         1e-5
     )
 
@@ -67,7 +67,7 @@ def test_exp_deriv_l2(alpha):
     x3 = torch.Tensor([0.75,0.0,-1])
 
 
-    func = lambda x : exp_deriv_l2(x, alpha, gamma=2, init=.5, size=2)
+    func = lambda x : exp_deriv_l2(x, alpha, gamma=2, init=.5, size=2) # -1 -0.5 0.5 1
     
     assert equals(
         func(x1),
@@ -76,13 +76,13 @@ def test_exp_deriv_l2(alpha):
 
     assert equals(
         func(x2),
-        torch.Tensor([-0.2*alpha, +0.1*alpha,0.4*alpha,0.2*alpha]),
+        torch.Tensor([0.2*alpha, -0.1*alpha,-0.4*alpha,-0.2*alpha]),
         1e-5
     )   
 
     assert equals(
         func(x3),
-        torch.Tensor([-0.25*alpha,  -0.5*alpha, 0.0]),
+        torch.Tensor([0.25*alpha,  0.5*alpha, 0.0]),
         1e-5
     )
 
@@ -102,12 +102,12 @@ def test_lin_deriv_l1(alpha):
 
     assert equals(
         func(x2),
-        torch.Tensor([-1*alpha, -1*alpha, 1*alpha]),
+        torch.Tensor([1*alpha, 1*alpha, -1*alpha]),
         1e-5
     )
     assert equals(
         func(x3),
-        torch.Tensor([-1*alpha,  0., -1*alpha]),
+        torch.Tensor([+1*alpha,  0., +1*alpha]),
         1e-5
     )
 
@@ -125,12 +125,12 @@ def test_exp_deriv_l1(alpha):
     )
     assert equals(
         func(x2),
-        torch.Tensor([-1*alpha, +1*alpha,1*alpha,1*alpha]),
+        torch.Tensor([1*alpha, -1*alpha,-1*alpha,-1*alpha]),
         1e-5
     ) 
     assert equals(
         func(x3),
-        torch.Tensor([-1*alpha,  -1*alpha, 0.0, -1*alpha]),
+        torch.Tensor([1*alpha,  1*alpha, 0.0, 1*alpha]),
         1e-5
     )
 
@@ -142,9 +142,9 @@ def test_exp_deriv_l1(alpha):
 def test_QuantWeightLin(top,  bottom, size):
 
 
-    random_tensor_1 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2),requires_grad=True)
-    random_tensor_2 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2),requires_grad=True)
-    random_tensor_3 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2),requires_grad=True)
+    random_tensor_1 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
+    random_tensor_2 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
+    random_tensor_3 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
 
     op = QuantWeightLin(top, bottom, size)
 
@@ -169,9 +169,35 @@ def test_QuantWeightLin(top,  bottom, size):
     )
 
 
+@pytest.mark.parametrize("init", [0.2,0.25,0.5,1])
+@pytest.mark.parametrize("gamma", [2,1.5,4])
+@pytest.mark.parametrize("size", [2,3,4,5])
+def test_QuantWeightExp(init, gamma, size):
 
-def test_QuantWeightExp():
-    pass
-if __name__ == "__main__":
-    
-    test_QuantWeightLin(2,-2,4)
+    random_tensor_1 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
+    random_tensor_2 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
+    random_tensor_3 = torch.autograd.Variable(torch.FloatTensor(6).view(3,2).uniform_(-5,5),requires_grad=True)
+
+    op = QuantWeightExp(gamma=gamma, init=init, size=size)
+
+
+    # Test L2
+    loss1 = torch.sum(op.apply(random_tensor_1,torch.Tensor([1]),torch.Tensor([0])))
+    loss1.backward()
+
+    assert equals(
+        random_tensor_1.grad,
+        torch.ones_like(random_tensor_1)-exp_deriv_l2(random_tensor_1, 1, gamma, init, size)
+    )
+
+
+    # Test L1
+    loss2 = torch.sum(op.apply(random_tensor_2,torch.Tensor([0]),torch.Tensor([1])))
+    loss2.backward()
+
+    assert equals(
+        random_tensor_2.grad,
+        torch.ones_like(random_tensor_2)-exp_deriv_l1(random_tensor_2, 1, gamma, init, size)
+    )
+
+
