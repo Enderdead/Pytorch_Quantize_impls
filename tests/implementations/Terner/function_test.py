@@ -31,14 +31,14 @@ def test_terner_connect_sto_forward():
     x = torch.Tensor([1,0,0.45,-1,-0.9]).view(1,-1)
 
     results = list()
-    for i in range(500):
+    for i in range(1000):
         temp_result = TernaryConnectStochastic.apply(x)
         # Tensor must have only -1 , 0 , 1 values
         assert not torch.any(torch.lt(torch.abs(temp_result-1),1e-8)*torch.lt(torch.abs(temp_result),1e-8))
         results.append(temp_result) 
 
     result = torch.cat(results,0 )
-    result = torch.sum(result, 0)/500
+    result = torch.sum(result, 0)/1000
     
     assert equals(
         result,
