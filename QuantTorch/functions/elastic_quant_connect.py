@@ -2,8 +2,6 @@ import torch
 from .common import front
 from ..device import device
 import warnings
-#warnings.simplefilter("always",DeprecationWarning)
-
 
 def _proj_val(x, set):
     """
@@ -48,24 +46,24 @@ def lin_deriv_l2(x, alpha, top=1,  bottom=-1, size=5):
 
     ..
          y
-        /\                 +_
-         |                   +_
-         |                     +_
-         |                       +_
-         |                         +_
+        /\                 _
+         |               _+   
+         |             _+        
+         |           _+            
+         |         _+                
          ---------+--------+---------+------> x
-           bottom  +_                 top
-                     +_      
-                       +_   
-                         +_ 
-                           +           
+           bottom                  _+   top
+                                 _+
+                               _+
+                             _+
+                            +        
                                    
     """
     delta = (top-bottom)/(size-1)
     res = torch.zeros_like(x)
 
     for i in range(size):
-        res += (-alpha*x +(bottom+i*delta)*alpha)* (x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta-delta/2)).float()
+        res += (alpha*x +-1*(bottom+i*delta)*alpha)* (x<=(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta-delta/2)).float()
 
     return res
 
@@ -97,14 +95,14 @@ def exp_deriv_l2(x, alpha, gamma=2, init=0.25, size=5):
                            
     """
     res = torch.zeros_like(x)
-    res+= -alpha*(x - init) *(x > 0).float()* (x < (init*gamma + init) / 2).float()
-    res+= -alpha*(x + init) *(x < 0).float()* (x > (-init*gamma + -init) / 2).float()
+    res+= alpha*(x - init) *(x > 0).float()* (x <= (init*gamma + init) / 2).float()
+    res+= alpha*(x + init) *(x <= 0).float()* (x > (-init*gamma + -init) / 2).float()
     cur = init
     for _ in range(size-1):
         previous = cur
         cur *=gamma
-        res += -alpha * (x - cur)* (x > (cur + previous) / 2).float() *(x < (cur + gamma*cur)/2).float()
-        res +=  -alpha *(x + cur)* (x < (-cur +- previous) / 2).float() *(x > (-cur + -gamma*cur)/2).float()
+        res += alpha * (x - cur)* (x > (cur + previous) / 2).float() *(x <= (cur + gamma*cur)/2).float()
+        res += alpha *(x + cur)* (x < (-cur +- previous) / 2).float() *(x > (-cur + -gamma*cur)/2).float()
 
     return res
 
@@ -113,24 +111,24 @@ def lin_deriv_l1(x,beta,top=1, bottom=-1, size=5):
     delta = (top-bottom)/(size-1)
     res = torch.zeros_like(x)
     for i in range(size):
-        res -= beta*(x<(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta)).float()
-        res += beta*(x<(bottom+(i)*delta)).float()*(x>(bottom+(i)*delta-delta/2)).float()
+        res += beta*(x<=(bottom+(i)*delta+delta/2)).float()*(x>(bottom+(i)*delta)).float()
+        res -= beta*(x<(bottom+(i)*delta)).float()*(x>(bottom+(i)*delta-delta/2)).float()
     return res
 
 
 def exp_deriv_l1(x, beta, gamma=2, init=0.25/2, size=5):
     res = torch.zeros_like(x)
     res -= beta*(x>0).float()*(x<(init)).float()
-    res += beta*(x>init).float()*(x< ((init*gamma + init)/2)).float()
-    res += beta*(x<0).float()*(x>(-init)).float()
+    res += beta*(x>init).float()*(x<= ((init*gamma + init)/2)).float()
+    res += beta*(x<=0).float()*(x>(-init)).float()
     res -= beta*(x<-init).float()*(x> ((-init*gamma - init)/2)).float()
     cur = init
     for _ in range(size-1):
         previous = cur
         cur *=gamma
         res -= beta* (x > (cur + previous) / 2).float()*(x < cur).float()
-        res += beta*(x > cur).float()*(x < (cur+cur*gamma)/2).float()
-        res += beta* (x < -((+cur + previous) / 2)).float()*(x > -cur).float()
+        res += beta*(x > cur).float()*(x <= (cur+cur*gamma)/2).float()
+        res += beta* (x <= -((+cur + previous) / 2)).float()*(x > -cur).float()
         res -= beta*(x < -cur).float()*(x> (-cur-cur*gamma)/2).float()
     return res
 
